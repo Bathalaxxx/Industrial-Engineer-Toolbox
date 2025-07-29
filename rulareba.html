@@ -1,0 +1,333 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RULA/REBA Calculator</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: url('https://images.unsplash.com/photo-1516321497487-e288fb19713f?auto=format&fit=crop&w=1920&q=80') no-repeat center center fixed;
+            background-size: cover;
+            color: #d0d0d0;
+        }
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 200px;
+            height: 100%;
+            background: rgba(20, 20, 20, 0.95);
+            padding: 20px;
+            box-shadow: 2px 0 8px rgba(0, 0, 0, 0.5);
+        }
+        .sidebar ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .sidebar ul li {
+            margin: 20px 0;
+        }
+        .sidebar ul li a {
+            color: #e0e0e0;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+        .sidebar ul li a:hover {
+            color: #1a73e8;
+        }
+        .calculator {
+            margin-left: 220px;
+            max-width: 800px;
+            padding: 20px;
+            background: rgba(20, 20, 20, 0.95);
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+            margin-top: 20px;
+            margin-bottom: 20px;
+        }
+        h1 {
+            text-align: center;
+            color: #e0e0e0;
+            text-shadow: 0 0 5px rgba(0, 0, 0, 0.7);
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #e0e0e0;
+        }
+        input, select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #444;
+            border-radius: 4px;
+            background: #1a1a1a;
+            color: #d0d0d0;
+        }
+        input:focus, select:focus {
+            outline: none;
+            border-color: #1a73e8;
+            box-shadow: 0 0 5px rgba(26, 115, 232, 0.5);
+        }
+        button {
+            background-color: #1a73e8;
+            color: #ffffff;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #1557b0;
+        }
+        #results {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #333;
+            border-radius: 4px;
+            background: rgba(30, 30, 30, 0.9);
+        }
+        .error {
+            color: #ff6666;
+            font-size: 0.9em;
+        }
+        .recommendations {
+            margin-top: 15px;
+            padding: 10px;
+            background: rgba(50, 50, 50, 0.9);
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 150px;
+            }
+            .calculator {
+                margin-left: 170px;
+                padding: 15px;
+            }
+        }
+        @media (max-width: 600px) {
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+                padding: 10px;
+            }
+            .calculator {
+                margin-left: 0;
+                margin-top: 100px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <ul>
+            <li><a href="index.html">Home</a></li>
+            <li><a href="queueing.html">Queueing Models</a></li>
+            <li><a href="timestudy.html">Time Study</a></li>
+            <li><a href="linearprogramming.html">Linear Programming</a></li>
+            <li><a href="samplesize.html">Sample Size</a></li>
+            <li><a href="niosh.html">NIOSH Lifting</a></li>
+            <li><a href="rulareba.html">RULA/REBA</a></li>
+            <li><a href="oee.html">OEE</a></li>
+        </ul>
+    </div>
+    <h1>RULA/REBA Calculator</h1>
+    <div class="calculator">
+        <div class="form-group">
+            <label for="assessment-type">Assessment Type</label>
+            <select id="assessment-type" onchange="toggleInputs()">
+                <option value="rula">RULA (Upper Limb)</option>
+                <option value="reba">REBA (Entire Body)</option>
+            </select>
+        </div>
+        <div id="rula-inputs">
+            <div class="form-group">
+                <label for="upper-arm">Upper Arm Posture (degrees)</label>
+                <select id="upper-arm">
+                    <option value="1">1-20° (neutral)</option>
+                    <option value="2">20-45°</option>
+                    <option value="3">45-90°</option>
+                    <option value="4">>90°</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="lower-arm">Lower Arm Posture (degrees)</label>
+                <select id="lower-arm">
+                    <option value="1">60-100°</option>
+                    <option value="2">0-60° or >100°</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="wrist">Wrist Posture (degrees)</label>
+                <select id="wrist">
+                    <option value="1">0-15° (neutral)</option>
+                    <option value="2">>15°</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="rula-force">Force/Load (kg)</label>
+                <select id="rula-force">
+                    <option value="0"><2 kg, intermittent</option>
+                    <option value="1">2-10 kg, intermittent</option>
+                    <option value="2">>10 kg or static</option>
+                </select>
+            </div>
+        </div>
+        <div id="reba-inputs" style="display: none;">
+            <div class="form-group">
+                <label for="trunk">Trunk Posture (degrees)</label>
+                <select id="trunk">
+                    <option value="1">0-20° (upright)</option>
+                    <option value="2">20-60°</option>
+                    <option value="3">>60°</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="legs">Legs Posture</label>
+                <select id="legs">
+                    <option value="1">Stable, bilateral support</option>
+                    <option value="2">Unstable or one leg raised</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="reba-force">Force/Load (kg)</label>
+                <select id="reba-force">
+                    <option value="0"><5 kg</option>
+                    <option value="1">5-10 kg</option>
+                    <option value="2">>10 kg</option>
+                </select>
+            </div>
+        </div>
+        <div class="form-group">
+            <label for="repetition">Repetition</label>
+            <select id="repetition">
+                <option value="0">Low (intermittent)</option>
+                <option value="1">High (>4 times/min or static >1 min)</option>
+            </select>
+        </div>
+        <button onclick="calculate()">Calculate</button>
+        <div id="results"></div>
+        <div id="error" class="error"></div>
+    </div>
+
+    <script>
+        function toggleInputs() {
+            const assessmentType = document.getElementById('assessment-type').value;
+            document.getElementById('rula-inputs').style.display = assessmentType === 'rula' ? 'block' : 'none';
+            document.getElementById('reba-inputs').style.display = assessmentType === 'reba' ? 'block' : 'none';
+        }
+
+        function getRecommendations(score, type) {
+            let recommendations = [];
+            if (type === 'rula') {
+                if (score >= 5) {
+                    recommendations.push("RULA score ≥5 indicates high risk. Investigate and implement changes to posture or task design.");
+                } else if (score >= 3) {
+                    recommendations.push("RULA score 3-4 indicates moderate risk. Monitor and consider ergonomic improvements.");
+                }
+            } else {
+                if (score >= 8) {
+                    recommendations.push("REBA score ≥8 indicates high risk. Urgent action needed to redesign task or workstation.");
+                } else if (score >= 4) {
+                    recommendations.push("REBA score 4-7 indicates medium risk. Plan ergonomic interventions.");
+                }
+            }
+            return recommendations.length > 0 
+                ? `<h4>Recommendations</h4><ul>${recommendations.map(r => `<li>${r}</li>`).join('')}</ul>` 
+                : '<p>No specific recommendations. Posture appears low risk.</p>';
+        }
+
+        function calculate() {
+            const assessmentType = document.getElementById('assessment-type').value;
+            const repetition = parseInt(document.getElementById('repetition').value);
+            const resultsDiv = document.getElementById('results');
+            const errorDiv = document.getElementById('error');
+
+            errorDiv.innerHTML = '';
+            resultsDiv.innerHTML = '';
+
+            if (assessmentType === 'rula') {
+                const upperArm = parseInt(document.getElementById('upper-arm').value);
+                const lowerArm = parseInt(document.getElementById('lower-arm').value);
+                const wrist = parseInt(document.getElementById('wrist').value);
+                const force = parseInt(document.getElementById('rula-force').value);
+
+                const groupA = Math.min(upperArm + lowerArm + wrist, 7);
+                const groupB = force + repetition;
+                const rulaScore = Math.min(groupA + groupB, 7);
+
+                resultsDiv.innerHTML = `
+                    <h3>RULA Results</h3>
+                    <p>RULA Score: ${rulaScore}</p>
+                    <div class="recommendations">${getRecommendations(rulaScore, 'rula')}</div>
+                `;
+            } else {
+                const trunk = parseInt(document.getElementById('trunk').value);
+                const legs = parseInt(document.getElementById('legs').value);
+                const force = parseInt(document.getElementById('reba-force').value);
+
+                const groupA = Math.min(trunk + legs, 9);
+                const groupB = force + repetition;
+                const rebaScore = Math.min(groupA + groupB, 11);
+
+                resultsDiv.innerHTML = `
+                    <h3>REBA Results</h3>
+                    <p>REBA Score: ${rebaScore}</p>
+                    <div class="recommendations">${getRecommendations(rebaScore, 'reba')}</div>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,320 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Little’s Law Calculator</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: url('https://images.unsplash.com/photo-1516321497487-e288fb19713f?auto=format&fit=crop&w=1920&q=80') no-repeat center center fixed;
+            background-size: cover;
+            color: #d0d0d0;
+        }
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 200px;
+            height: 100%;
+            background: rgba(20, 20, 20, 0.95);
+            padding: 20px;
+            box-shadow: 2px 0 8px rgba(0, 0, 0, 0.5);
+        }
+        .sidebar ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .sidebar ul li {
+            margin: 20px 0;
+        }
+        .sidebar ul li a {
+            color: #e0e0e0;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+        .sidebar ul li a:hover {
+            color: #1a73e8;
+        }
+        .calculator {
+            margin-left: 220px;
+            max-width: 800px;
+            padding: 20px;
+            background: rgba(20, 20, 20, 0.95);
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+            margin-top: 20px;
+            margin-bottom: 20px;
+        }
+        h1 {
+            text-align: center;
+            color: #e0e0e0;
+            text-shadow: 0 0 5px rgba(0, 0, 0, 0.7);
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #e0e0e0;
+        }
+        input, select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #444;
+            border-radius: 4px;
+            background: #1a1a1a;
+            color: #d0d0d0;
+        }
+        input:focus, select:focus {
+            outline: none;
+            border-color: #1a73e8;
+            box-shadow: 0 0 5px rgba(26, 115, 232, 0.5);
+        }
+        button {
+            background-color: #1a73e8;
+            color: #ffffff;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #1557b0;
+        }
+        #results {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #333;
+            border-radius: 4px;
+            background: rgba(30, 30, 30, 0.9);
+        }
+        .error {
+            color: #ff6666;
+            font-size: 0.9em;
+        }
+        .recommendations {
+            margin-top: 15px;
+            padding: 10px;
+            background: rgba(50, 50, 50, 0.9);
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 150px;
+            }
+            .calculator {
+                margin-left: 170px;
+                padding: 15px;
+            }
+        }
+        @media (max-width: 600px) {
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+                padding: 10px;
+            }
+            .calculator {
+                margin-left: 0;
+                margin-top: 100px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <ul>
+            <li><a href="index.html">Home</a></li>
+            <li><a href="queueing.html">Queueing Models</a></li>
+            <li><a href="timestudy.html">Time Study</a></li>
+            <li><a href="linearprogramming.html">Linear Programming</a></li>
+            <li><a href="samplesize.html">Sample Size</a></li>
+            <li><a href="niosh.html">NIOSH Lifting</a></li>
+            <li><a href="rulareba.html">RULA/REBA</a></li>
+            <li><a href="oee.html">OEE</a></li>
+            <li><a href="eoq.html">EOQ</a></li>
+            <li><a href="safetystock.html">Safety Stock</a></li>
+            <li><a href="rop.html">Reorder Point</a></li>
+            <li><a href="kanban.html">Kanban</a></li>
+            <li><a href="littleslaw.html">Little’s Law</a></li>
+        </ul>
+    </div>
+    <h1>Little’s Law Calculator</h1>
+    <div class="calculator">
+        <div class="form-group">
+            <label for="calculate-type">Calculate</label>
+            <select id="calculate-type" onchange="toggleInputs()">
+                <option value="L">Average Number in System (L)</option>
+                <option value="lambda">Arrival Rate (λ)</option>
+                <option value="W">Average Time in System (W)</option>
+            </select>
+        </div>
+        <div id="L-inputs">
+            <div class="form-group">
+                <label for="lambda">Arrival Rate (λ, units per time)</label>
+                <input type="number" id="lambda" step="any" min="0">
+            </div>
+            <div class="form-group">
+                <label for="W">Average Time in System (W, time units)</label>
+                <input type="number" id="W" step="any" min="0">
+            </div>
+        </div>
+        <div id="lambda-inputs" style="display: none;">
+            <div class="form-group">
+                <label for="L-lambda">Average Number in System (L)</label>
+                <input type="number" id="L-lambda" step="any" min="0">
+            </div>
+            <div class="form-group">
+                <label for="W-lambda">Average Time in System (W, time units)</label>
+                <input type="number" id="W-lambda" step="any" min="0">
+            </div>
+        </div>
+        <div id="W-inputs" style="display: none;">
+            <div class="form-group">
+                <label for="L-W">Average Number in System (L)</label>
+                <input type="number" id="L-W" step="any" min="0">
+            </div>
+            <div class="form-group">
+                <label for="lambda-W">Arrival Rate (λ, units per time)</label>
+                <input type="number" id="lambda-W" step="any" min="0">
+            </div>
+        </div>
+        <button onclick="calculate()">Calculate</button>
+        <div id="results"></div>
+        <div id="error" class="error"></div>
+    </div>
+
+    <script>
+        function toggleInputs() {
+            const calculateType = document.getElementById('calculate-type').value;
+            document.getElementById('L-inputs').style.display = calculateType === 'L' ? 'block' : 'none';
+            document.getElementById('lambda-inputs').style.display = calculateType === 'lambda' ? 'block' : 'none';
+            document.getElementById('W-inputs').style.display = calculateType === 'W' ? 'block' : 'none';
+        }
+
+        function getRecommendations(value, type) {
+            let recommendations = [];
+            if (type === 'L' && value > 50) {
+                recommendations.push("High number in system (L > 50). Reduce arrival rate or processing time.");
+            } else if (type === 'lambda' && value > 100) {
+                recommendations.push("High arrival rate (λ > 100). Increase capacity or streamline processes.");
+            } else if (type === 'W' && value > 60) {
+                recommendations.push("Long time in system (W > 60). Optimize process flow or reduce bottlenecks.");
+            }
+            return recommendations.length > 0 
+                ? `<h4>Recommendations</h4><ul>${recommendations.map(r => `<li>${r}</li>`).join('')}</ul>` 
+                : '<p>No specific recommendations. System appears balanced.</p>';
+        }
+
+        function calculate() {
+            const calculateType = document.getElementById('calculate-type').value;
+            const resultsDiv = document.getElementById('results');
+            const errorDiv = document.getElementById('error');
+
+            errorDiv.innerHTML = '';
+            resultsDiv.innerHTML = '';
+
+            if (calculateType === 'L') {
+                const lambda = parseFloat(document.getElementById('lambda').value);
+                const W = parseFloat(document.getElementById('W').value);
+                if (isNaN(lambda) || lambda <= 0) {
+                    errorDiv.innerHTML = 'Please enter a valid positive arrival rate.';
+                    return;
+                }
+                if (isNaN(W) || W <= 0) {
+                    errorDiv.innerHTML = 'Please enter a valid positive average time in system.';
+                    return;
+                }
+                const L = lambda * W;
+                resultsDiv.innerHTML = `
+                    <h3>Little’s Law Results</h3>
+                    <p>Average Number in System (L): ${L.toFixed(2)}</p>
+                    <div class="recommendations">${getRecommendations(L, 'L')}</div>
+                `;
+            } else if (calculateType === 'lambda') {
+                const L = parseFloat(document.getElementById('L-lambda').value);
+                const W = parseFloat(document.getElementById('W-lambda').value);
+                if (isNaN(L) || L < 0) {
+                    errorDiv.innerHTML = 'Please enter a valid non-negative average number in system.';
+                    return;
+                }
+                if (isNaN(W) || W <= 0) {
+                    errorDiv.innerHTML = 'Please enter a valid positive average time in system.';
+                    return;
+                }
+                const lambda = L / W;
+                resultsDiv.innerHTML = `
+                    <h3>Little’s Law Results</h3>
+                    <p>Arrival Rate (λ): ${lambda.toFixed(2)} units per time</p>
+                    <div class="recommendations">${getRecommendations(lambda, 'lambda')}</div>
+                `;
+            } else {
+                const L = parseFloat(document.getElementById('L-W').value);
+                const lambda = parseFloat(document.getElementById('lambda-W').value);
+                if (isNaN(L) || L < 0) {
+                    errorDiv.innerHTML = 'Please enter a valid non-negative average number in system.';
+                    return;
+                }
+                if (isNaN(lambda) || lambda <= 0) {
+                    errorDiv.innerHTML = 'Please enter a valid positive arrival rate.';
+                    return;
+                }
+                const W = L / lambda;
+                resultsDiv.innerHTML = `
+                    <h3>Little’s Law Results</h3>
+                    <p>Average Time in System (W): ${W.toFixed(2)} time units</p>
+                    <div class="recommendations">${getRecommendations(W, 'W')}</div>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>

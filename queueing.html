@@ -1,0 +1,743 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Queueing Models Calculator</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: url('https://images.unsplash.com/photo-1516321497487-e288fb19713f?auto=format&fit=crop&w=1920&q=80') no-repeat center center fixed;
+            background-size: cover;
+            color: #d0d0d0;
+        }
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 200px;
+            height: 100%;
+            background: rgba(20, 20, 20, 0.95);
+            padding: 20px;
+            box-shadow: 2px 0 8px rgba(0, 0, 0, 0.5);
+        }
+        .sidebar ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .sidebar ul li {
+            margin: 20px 0;
+        }
+        .sidebar ul li a {
+            color: #e0e0e0;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+        .sidebar ul li a:hover {
+            color: #1a73e8;
+        }
+        .calculator {
+            margin-left: 220px;
+            max-width: 800px;
+            padding: 20px;
+            background: rgba(20, 20, 20, 0.95);
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+            margin-top: 20px;
+            margin-bottom: 20px;
+        }
+        h1 {
+            text-align: center;
+            color: #e0e0e0;
+            text-shadow: 0 0 5px rgba(0, 0, 0, 0.7);
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #e0e0e0;
+        }
+        input, select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #444;
+            border-radius: 4px;
+            background: #1a1a1a;
+            color: #d0d0d0;
+        }
+        input:focus, select:focus {
+            outline: none;
+            border-color: #1a73e8;
+            box-shadow: 0 0 5px rgba(26, 115, 232, 0.5);
+        }
+        button {
+            background-color: #1a73e8;
+            color: #ffffff;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #1557b0;
+        }
+        #results {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #333;
+            border-radius: 4px;
+            background: rgba(30, 30, 30, 0.9);
+        }
+        .error {
+            color: #ff6666;
+            font-size: 0.9em;
+        }
+        #model-description {
+            margin-top: 10px;
+            font-size: 0.9em;
+            color: #bbbbbb;
+            background: rgba(40, 40, 40, 0.9);
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .recommendations {
+            margin-top: 15px;
+            padding: 10px;
+            background: rgba(50, 50, 50, 0.9);
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 150px;
+            }
+            .calculator {
+                margin-left: 170px;
+                padding: 15px;
+            }
+        }
+        @media (max-width: 600px) {
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+                padding: 10px;
+            }
+            .calculator {
+                margin-left: 0;
+                margin-top: 100px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <ul>
+            <li><a href="index.html">Home</a></li>
+            <li><a href="queueing.html">Queueing Models</a></li>
+            <li><a href="timestudy.html">Time Study</a></li>
+            <li><a href="linearprogramming.html">Linear Programming</a></li>
+        </ul>
+    </div>
+    <h1>Queueing Models Calculator</h1>
+    <div class="calculator">
+        <div class="form-group">
+            <label for="model">Queueing Model</label>
+            <select id="model" onchange="toggleInputs()">
+                <option value="mm1">M/M/1</option>
+                <option value="mm1k">M/M/1/K</option>
+                <option value="mg1">M/G/1</option>
+                <option value="md1">M/D/1</option>
+                <option value="mmc">M/M/c</option>
+                <option value="mmck">M/M/c/K</option>
+                <option value="mgc">M/G/c</option>
+                <option value="mminf">M/M/∞</option>
+                <option value="mmcc">M/M/c/c</option>
+                <option value="mmckn">M/M/c/K/N</option>
+                <option value="gg1">G/G/1</option>
+                <option value="gm1">G/M/1</option>
+                <option value="mek1">M/Eₖ/1</option>
+                <option value="priority">Priority Queues</option>
+                <option value="mxm1">Mˣ/M/1</option>
+                <option value="mmy1">M/Mʸ/1</option>
+            </select>
+            <div id="model-description"></div>
+        </div>
+        <div class="form-group">
+            <label for="lambda">Arrival Rate (λ, customers per unit time)</label>
+            <input type="number" id="lambda" step="any" min="0" required>
+        </div>
+        <div class="form-group">
+            <label for="mu">Service Rate (μ, customers per unit time)</label>
+            <input type="number" id="mu" step="any" min="0" required>
+        </div>
+        <div class="form-group" id="servers-group" style="display: none;">
+            <label for="c">Number of Servers (c)</label>
+            <input type="number" id="c" step="1" min="1">
+        </div>
+        <div class="form-group" id="k-group" style="display: none;">
+            <label for="k">Queue Capacity (k, including server)</label>
+            <input type="number" id="k" step="1" min="1">
+        </div>
+        <div class="form-group" id="sigma-group" style="display: none;">
+            <label for="sigma">Standard Deviation of Service Time (σ)</label>
+            <input type="number" id="sigma" step="any" min="0">
+        </div>
+        <div class="form-group" id="n-group" style="display: none;">
+            <label for="n">Population Size (N)</label>
+            <input type="number" id="n" step="1" min="1">
+        </div>
+        <div class="form-group" id="batch-size-group" style="display: none;">
+            <label for="batch-size">Mean Batch Size</label>
+            <input type="number" id="batch-size" step="any" min="1">
+        </div>
+        <div class="form-group" id="bulk-size-group" style="display: none;">
+            <label for="bulk-size">Service Batch Size (Y)</label>
+            <input type="number" id="bulk-size" step="1" min="1">
+        </div>
+        <div class="form-group" id="erlang-k-group" style="display: none;">
+            <label for="erlang-k">Erlang-k Shape Parameter (k)</label>
+            <input type="number" id="erlang-k" step="1" min="1">
+        </div>
+        <div class="form-group" id="priority-type-group" style="display: none;">
+            <label for="priority-type">Priority Type</label>
+            <select id="priority-type">
+                <option value="preemptive">Preemptive</option>
+                <option value="non-preemptive">Non-Preemptive</option>
+            </select>
+        </div>
+        <button onclick="calculate()">Calculate</button>
+        <div id="results"></div>
+        <div id="error" class="error"></div>
+    </div>
+
+    <script>
+        const modelDescriptions = {
+            mm1: `
+                <strong>M/M/1:</strong> Single-server queue with Poisson arrivals (rate λ) and exponential service times (rate μ). Assumes infinite queue capacity and requires λ < μ.<br>
+                <strong>When to use:</strong> Model a single checkout counter at a small store, like a coffee shop with one barista, where customers arrive randomly and service times vary.
+            `,
+            mm1k: `
+                <strong>M/M/1/K:</strong> Single-server queue with finite capacity (k, including server). Customers arriving when full are lost. Uses Poisson arrivals (λ) and exponential service (μ).<br>
+                <strong>When to use:</strong> Evaluate a small ticket booth or parking lot with limited space, where customers are turned away if the queue is full.
+            `,
+            mg1: `
+                <strong>M/G/1:</strong> Single-server queue with Poisson arrivals (λ) and general service time distribution (mean 1/μ, standard deviation σ). Requires λ < μ.<br>
+                <strong>When to use:</strong> Study a repair shop where job durations vary significantly (e.g., fixing different equipment), but customers arrive randomly.
+            `,
+            md1: `
+                <strong>M/D/1:</strong> Single-server queue with Poisson arrivals (λ) and deterministic (fixed) service times (1/μ). Requires λ < μ.<br>
+                <strong>When to use:</strong> Analyze an automated car wash with consistent service times but random customer arrivals.
+            `,
+            mmc: `
+                <strong>M/M/c:</strong> Multiple-server queue (c servers) with Poisson arrivals (λ) and exponential service times (μ per server). Requires λ < cμ.<br>
+                <strong>When to use:</strong> Analyze a supermarket with multiple checkout lanes or a call center with several agents, where customers arrive randomly.
+            `,
+            mmck: `
+                <strong>M/M/c/K:</strong> Multiple-server queue with finite capacity (k, including servers). Customers arriving when full are lost. Requires λ < cμ.<br>
+                <strong>When to use:</strong> Model a bank with multiple tellers and limited waiting room, where customers leave if no space is available.
+            `,
+            mgc: `
+                <strong>M/G/c:</strong> Multiple-server queue with Poisson arrivals (λ) and general service times (mean 1/μ, standard deviation σ). Requires λ < cμ.<br>
+                <strong>When to use:</strong> Evaluate a hospital emergency room with multiple doctors, where treatment times vary significantly.<br>
+                <strong>Note:</strong> Calculations are complex and may require numerical methods or simulation.
+            `,
+            mminf: `
+                <strong>M/M/∞:</strong> Infinite-server queue with Poisson arrivals (λ) and exponential service times (μ). No queue forms as each customer gets a server.<br>
+                <strong>When to use:</strong> Model a large self-service system, like a website with unlimited server capacity, where users are served immediately.
+            `,
+            mmcc: `
+                <strong>M/M/c/c:</strong> Multiple-server loss system with c servers, Poisson arrivals (λ), and exponential service (μ). No queue; customers are blocked if all servers are busy.<br>
+                <strong>When to use:</strong> Analyze a phone system with c lines, where callers get a busy signal if all lines are occupied.
+            `,
+            mmckn: `
+                <strong>M/M/c/K/N:</strong> Multiple-server queue with finite capacity (k) and finite population (N). Customers come from a limited pool.<br>
+                <strong>When to use:</strong> Study a factory with c machines and N workers, where workers queue for machine access but only N workers exist.
+            `,
+            gg1: `
+                <strong>G/G/1:</strong> Single-server queue with general arrivals and service times. Complex steady-state analysis.<br>
+                <strong>When to use:</strong> Model a system with non-random arrivals and variable service times, like a bespoke tailor shop.<br>
+                <strong>Note:</strong> Calculations are complex and typically require simulation.
+            `,
+            gm1: `
+                <strong>G/M/1:</strong> Single-server queue with general arrivals and exponential service times (μ).<br>
+                <strong>When to use:</strong> Analyze a system with non-random arrivals, like scheduled appointments at a clinic, but variable service times.<br>
+                <strong>Note:</strong> Calculations are complex and may require numerical methods.
+            `,
+            mek1: `
+                <strong>M/Eₖ/1:</strong> Single-server queue with Poisson arrivals (λ) and Erlang-k service times (shape parameter k, mean 1/μ).<br>
+                <strong>When to use:</strong> Model a production line with k consistent stages per job, like an assembly process with fixed steps.
+            `,
+            priority: `
+                <strong>Priority Queues:</strong> Single-server queue with priority classes (preemptive or non-preemptive). High-priority customers are served first.<br>
+                <strong>When to use:</strong> Evaluate an emergency hotline where urgent calls are prioritized over routine inquiries.<br>
+                <strong>Note:</strong> Calculations depend on specific priority rules and are complex.
+            `,
+            mxm1: `
+                <strong>Mˣ/M/1:</strong> Single-server queue with batch Poisson arrivals (mean batch size) and exponential service times (μ).<br>
+                <strong>When to use:</strong> Model a bus stop where passengers arrive in groups (e.g., tour groups) but are served individually.
+            `,
+            mmy1: `
+                <strong>M/Mʸ/1:</strong> Single-server queue with Poisson arrivals (λ) and bulk service of Y customers at a time (rate μ).<br>
+                <strong>When to use:</strong> Analyze a ferry that departs with up to Y passengers at fixed intervals.
+            `
+        };
+
+        function toggleInputs() {
+            const model = document.getElementById('model').value;
+            document.getElementById('servers-group').style.display = ['mmc', 'mmck', 'mgc', 'mmcc', 'mmckn'].includes(model) ? 'block' : 'none';
+            document.getElementById('k-group').style.display = ['mm1k', 'mmck', 'mmckn'].includes(model) ? 'block' : 'none';
+            document.getElementById('sigma-group').style.display = ['mg1', 'mgc'].includes(model) ? 'block' : 'none';
+            document.getElementById('n-group').style.display = model === 'mmckn' ? 'block' : 'none';
+            document.getElementById('batch-size-group').style.display = model === 'mxm1' ? 'block' : 'none';
+            document.getElementById('bulk-size-group').style.display = model === 'mmy1' ? 'block' : 'none';
+            document.getElementById('erlang-k-group').style.display = model === 'mek1' ? 'block' : 'none';
+            document.getElementById('priority-type-group').style.display = model === 'priority' ? 'block' : 'none';
+            document.getElementById('model-description').innerHTML = modelDescriptions[model];
+        }
+
+        function getRecommendations(model, rho, Lq, Wq, c = 1, k = null, sigma = null) {
+            let recommendations = [];
+            
+            if (rho > 0.8) {
+                recommendations.push("High utilization (ρ > 80%). Consider increasing service rate (μ) or adding servers to reduce congestion.");
+            } else if (rho < 0.3) {
+                recommendations.push("Low utilization (ρ < 30%). Consider reducing resources (e.g., servers or staff) to optimize costs.");
+            }
+            
+            if (Lq > 5) {
+                recommendations.push("Long queue length (Lq > 5). Improve service speed or add servers to reduce customer wait times.");
+            }
+            
+            if (Wq > 0.5) {
+                recommendations.push("High waiting time in queue (Wq > 0.5 units). Streamline processes or increase capacity to enhance customer experience.");
+            }
+
+            if (['mmc', 'mmck'].includes(model) && Lq > 2) {
+                recommendations.push(`With ${c} servers, queue length is high. Adding one more server may significantly reduce wait times.`);
+            }
+
+            if (['mm1k', 'mmck'].includes(model) && k !== null) {
+                const Pk = (1 - rho) * Math.pow(rho, k) / (1 - Math.pow(rho, k + 1));
+                if (Pk > 0.1) {
+                    recommendations.push(`High probability of system being full (Pk = ${(Pk * 100).toFixed(1)}%). Increase queue capacity (k) to reduce customer loss.`);
+                }
+            }
+
+            if (model === 'mg1' && sigma !== null && sigma > 0.2 / mu) {
+                recommendations.push("High service time variability (σ > 20% of mean service time). Standardize processes to reduce variability and improve queue performance.");
+            }
+
+            return recommendations.length > 0 
+                ? `<h4>Recommendations</h4><ul>${recommendations.map(r => `<li>${r}</li>`).join('')}</ul>` 
+                : '<p>No specific recommendations. System appears balanced.</p>';
+        }
+
+        function calculate() {
+            const model = document.getElementById('model').value;
+            const lambda = parseFloat(document.getElementById('lambda').value);
+            const mu = parseFloat(document.getElementById('mu').value);
+            const c = parseInt(document.getElementById('c').value) || 1;
+            const k = parseInt(document.getElementById('k').value);
+            const sigma = parseFloat(document.getElementById('sigma').value);
+            const n = parseInt(document.getElementById('n').value);
+            const batchSize = parseFloat(document.getElementById('batch-size').value);
+            const bulkSize = parseInt(document.getElementById('bulk-size').value);
+            const erlangK = parseInt(document.getElementById('erlang-k').value);
+            const resultsDiv = document.getElementById('results');
+            const errorDiv = document.getElementById('error');
+
+            errorDiv.innerHTML = '';
+            resultsDiv.innerHTML = '';
+
+            if (isNaN(lambda) || isNaN(mu) || lambda < 0 || mu <= 0) {
+                errorDiv.innerHTML = 'Please enter valid positive numbers for arrival and service rates.';
+                return;
+            }
+
+            let results = '';
+
+            if (model === 'mm1') {
+                if (lambda >= mu) {
+                    errorDiv.innerHTML = 'For M/M/1, arrival rate (λ) must be less than service rate (μ).';
+                    return;
+                }
+                const rho = lambda / mu;
+                const Lq = (lambda * lambda) / (mu * (mu - lambda));
+                const L = Lq + rho;
+                const Wq = Lq / lambda;
+                const W = Wq + 1 / mu;
+
+                results = `
+                    <h3>M/M/1 Results</h3>
+                    <p>Utilization (ρ): ${rho.toFixed(3)}</p>
+                    <p>Average Queue Length (Lq): ${Lq.toFixed(3)}</p>
+                    <p>Average Number in System (L): ${L.toFixed(3)}</p>
+                    <p>Average Waiting Time in Queue (Wq): ${Wq.toFixed(3)}</p>
+                    <p>Average Time in System (W): ${W.toFixed(3)}</p>
+                    <div class="recommendations">${getRecommendations(model, rho, Lq, Wq)}</div>
+                `;
+            } else if (model === 'mm1k') {
+                if (isNaN(k) || k < 1) {
+                    errorDiv.innerHTML = 'Please enter a valid queue capacity (k ≥ 1).';
+                    return;
+                }
+                const rho = lambda / mu;
+                let P0 = (1 - rho) / (1 - Math.pow(rho, k + 1));
+                if (rho === 1) {
+                    P0 = 1 / (k + 1);
+                }
+                const L = rho * (1 - (k + 1) * Math.pow(rho, k) + k * Math.pow(rho, k + 1)) / ((1 - rho) * (1 - Math.pow(rho, k + 1)));
+                if (rho === 1) {
+                    L = k / 2;
+                }
+                const lambdaEff = lambda * (1 - P0 * Math.pow(rho, k));
+                const Lq = L - lambdaEff / mu;
+                const W = L / lambdaEff;
+                const Wq = Lq / lambdaEff;
+
+                results = `
+                    <h3>M/M/1/K Results</h3>
+                    <p>Utilization (ρ): ${rho.toFixed(3)}</p>
+                    <p>Probability of Zero Customers (P0): ${P0.toFixed(3)}</p>
+                    <p>Effective Arrival Rate (λ_eff): ${lambdaEff.toFixed(3)}</p>
+                    <p>Average Queue Length (Lq): ${Lq.toFixed(3)}</p>
+                    <p>Average Number in System (L): ${L.toFixed(3)}</p>
+                    <p>Average Waiting Time in Queue (Wq): ${Wq.toFixed(3)}</p>
+                    <p>Average Time in System (W): ${W.toFixed(3)}</p>
+                    <div class="recommendations">${getRecommendations(model, rho, Lq, Wq, 1, k)}</div>
+                `;
+            } else if (model === 'mg1') {
+                if (isNaN(sigma) || sigma < 0) {
+                    errorDiv.innerHTML = 'Please enter a valid non-negative standard deviation (σ).';
+                    return;
+                }
+                if (lambda >= mu) {
+                    errorDiv.innerHTML = 'For M/G/1, arrival rate (λ) must be less than service rate (μ).';
+                    return;
+                }
+                const rho = lambda / mu;
+                const meanServiceTime = 1 / mu;
+                const variance = sigma * sigma;
+                const Lq = (lambda * lambda * (variance + meanServiceTime * meanServiceTime)) / (2 * (1 - rho));
+                const L = Lq + rho;
+                const Wq = Lq / lambda;
+                const W = Wq + meanServiceTime;
+
+                results = `
+                    <h3>M/G/1 Results</h3>
+                    <p>Utilization (ρ): ${rho.toFixed(3)}</p>
+                    <p>Average Queue Length (Lq): ${Lq.toFixed(3)}</p>
+                    <p>Average Number in System (L): ${L.toFixed(3)}</p>
+                    <p>Average Waiting Time in Queue (Wq): ${Wq.toFixed(3)}</p>
+                    <p>Average Time in System (W): ${W.toFixed(3)}</p>
+                    <div class="recommendations">${getRecommendations(model, rho, Lq, Wq, 1, null, sigma)}</div>
+                `;
+            } else if (model === 'md1') {
+                if (lambda >= mu) {
+                    errorDiv.innerHTML = 'For M/D/1, arrival rate (λ) must be less than service rate (μ).';
+                    return;
+                }
+                const rho = lambda / mu;
+                const meanServiceTime = 1 / mu;
+                const Lq = (lambda * lambda * meanServiceTime * meanServiceTime) / (2 * (1 - rho));
+                const L = Lq + rho;
+                const Wq = Lq / lambda;
+                const W = Wq + meanServiceTime;
+
+                results = `
+                    <h3>M/D/1 Results</h3>
+                    <p>Utilization (ρ): ${rho.toFixed(3)}</p>
+                    <p>Average Queue Length (Lq): ${Lq.toFixed(3)}</p>
+                    <p>Average Number in System (L): ${L.toFixed(3)}</p>
+                    <p>Average Waiting Time in Queue (Wq): ${Wq.toFixed(3)}</p>
+                    <p>Average Time in System (W): ${W.toFixed(3)}</p>
+                    <div class="recommendations">${getRecommendations(model, rho, Lq, Wq)}</div>
+                `;
+            } else if (model === 'mmc') {
+                if (isNaN(c) || c < 1) {
+                    errorDiv.innerHTML = 'Please enter a valid number of servers (c ≥ 1).';
+                    return;
+                }
+                if (lambda >= c * mu) {
+                    errorDiv.innerHTML = 'For M/M/c, arrival rate (λ) must be less than c * service rate (μ).';
+                    return;
+                }
+                const rho = lambda / (c * mu);
+                let P0 = 0;
+                for (let n = 0; n < c; n++) {
+                    P0 += (Math.pow(lambda / mu, n) / factorial(n));
+                }
+                P0 += (Math.pow(lambda / mu, c) / factorial(c)) * (c * mu) / (c * mu - lambda);
+                P0 = 1 / P0;
+
+                const Lq = (P0 * Math.pow(lambda / mu, c) * lambda * mu) / (factorial(c - 1) * Math.pow(c * mu - lambda, 2));
+                const Wq = Lq / lambda;
+                const W = Wq + 1 / mu;
+                const L = lambda * W;
+
+                results = `
+                    <h3>M/M/c Results</h3>
+                    <p>Utilization (ρ): ${rho.toFixed(3)}</p>
+                    <p>Probability of Zero Customers (P0): ${P0.toFixed(3)}</p>
+                    <p>Average Queue Length (Lq): ${Lq.toFixed(3)}</p>
+                    <p>Average Number in System (L): ${L.toFixed(3)}</p>
+                    <p>Average Waiting Time in Queue (Wq): ${Wq.toFixed(3)}</p>
+                    <p>Average Time in System (W): ${W.toFixed(3)}</p>
+                    <div class="recommendations">${getRecommendations(model, rho, Lq, Wq, c)}</div>
+                `;
+            } else if (model === 'mmck') {
+                if (isNaN(c) || c < 1) {
+                    errorDiv.innerHTML = 'Please enter a valid number of servers (c ≥ 1).';
+                    return;
+                }
+                if (isNaN(k) || k < c) {
+                    errorDiv.innerHTML = 'Please enter a valid queue capacity (k ≥ c).';
+                    return;
+                }
+                if (lambda >= c * mu) {
+                    errorDiv.innerHTML = 'For M/M/c/K, arrival rate (λ) must be less than c * service rate (μ).';
+                    return;
+                }
+                const rho = lambda / (c * mu);
+                let P0 = 0;
+                for (let n = 0; n <= k; n++) {
+                    P0 += (n < c ? Math.pow(lambda / mu, n) / factorial(n) : Math.pow(lambda / mu, n) / (factorial(c) * Math.pow(c, n - c)));
+                }
+                P0 = 1 / P0;
+                let Lq = 0;
+                for (let n = c; n <= k; n++) {
+                    Lq += (n - c) * P0 * Math.pow(lambda / mu, n) / (factorial(c) * Math.pow(c, n - c));
+                }
+                const lambdaEff = lambda * (1 - P0 * Math.pow(lambda / mu, k) / (factorial(c) * Math.pow(c, k - c)));
+                const Wq = Lq / lambdaEff;
+                const W = Wq + 1 / mu;
+                const L = lambdaEff * W;
+
+                results = `
+                    <h3>M/M/c/K Results</h3>
+                    <p>Utilization (ρ): ${rho.toFixed(3)}</p>
+                    <p>Probability of Zero Customers (P0): ${P0.toFixed(3)}</p>
+                    <p>Effective Arrival Rate (λ_eff): ${lambdaEff.toFixed(3)}</p>
+                    <p>Average Queue Length (Lq): ${Lq.toFixed(3)}</p>
+                    <p>Average Number in System (L): ${L.toFixed(3)}</p>
+                    <p>Average Waiting Time in Queue (Wq): ${Wq.toFixed(3)}</p>
+                    <p>Average Time in System (W): ${W.toFixed(3)}</p>
+                    <div class="recommendations">${getRecommendations(model, rho, Lq, Wq, c, k)}</div>
+                `;
+            } else if (model === 'mminf') {
+                const rho = lambda / mu;
+                const L = rho;
+                const W = 1 / mu;
+
+                results = `
+                    <h3>M/M/∞ Results</h3>
+                    <p>Utilization (ρ): ${rho.toFixed(3)}</p>
+                    <p>Average Number in System (L): ${L.toFixed(3)}</p>
+                    <p>Average Time in System (W): ${W.toFixed(3)}</p>
+                    <div class="recommendations">${getRecommendations(model, rho, 0, 0)}</div>
+                `;
+            } else if (model === 'mmcc') {
+                if (isNaN(c) || c < 1) {
+                    errorDiv.innerHTML = 'Please enter a valid number of servers (c ≥ 1).';
+                    return;
+                }
+                const rho = lambda / mu;
+                let P0 = 0;
+                for (let n = 0; n <= c; n++) {
+                    P0 += Math.pow(rho, n) / factorial(n);
+                }
+                P0 = 1 / P0;
+                const Pb = P0 * Math.pow(rho, c) / factorial(c);
+
+                results = `
+                    <h3>M/M/c/c Results</h3>
+                    <p>Utilization (ρ): ${(rho / c).toFixed(3)}</p>
+                    <p>Blocking Probability (Pb): ${Pb.toFixed(3)}</p>
+                    <div class="recommendations">${getRecommendations(model, rho / c, 0, 0, c)}</div>
+                `;
+            } else if (model === 'mmckn') {
+                if (isNaN(c) || c < 1) {
+                    errorDiv.innerHTML = 'Please enter a valid number of servers (c ≥ 1).';
+                    return;
+                }
+                if (isNaN(k) || k < c) {
+                    errorDiv.innerHTML = 'Please enter a valid queue capacity (k ≥ c).';
+                    return;
+                }
+                if (isNaN(n) || n < k) {
+                    errorDiv.innerHTML = 'Please enter a valid population size (N ≥ k).';
+                    return;
+                }
+                const rho = lambda / mu;
+                let P0 = 0;
+                for (let i = 0; i <= k; i++) {
+                    P0 += combinatorial(n, i) * Math.pow(rho, i);
+                }
+                P0 = 1 / P0;
+                let Lq = 0;
+                for (let i = c; i <= k; i++) {
+                    Lq += (i - c) * combinatorial(n, i) * Math.pow(rho, i) * P0;
+                }
+                const lambdaEff = lambda * (n - Lq - c * (1 - P0 * Math.pow(rho, c) / factorial(c)));
+                const Wq = Lq / lambdaEff;
+                const W = Wq + 1 / mu;
+                const L = lambdaEff * W;
+
+                results = `
+                    <h3>M/M/c/K/N Results</h3>
+                    <p>Utilization (ρ): ${(rho / c).toFixed(3)}</p>
+                    <p>Probability of Zero Customers (P0): ${P0.toFixed(3)}</p>
+                    <p>Effective Arrival Rate (λ_eff): ${lambdaEff.toFixed(3)}</p>
+                    <p>Average Queue Length (Lq): ${Lq.toFixed(3)}</p>
+                    <p>Average Number in System (L): ${L.toFixed(3)}</p>
+                    <p>Average Waiting Time in Queue (Wq): ${Wq.toFixed(3)}</p>
+                    <p>Average Time in System (W): ${W.toFixed(3)}</p>
+                    <div class="recommendations">${getRecommendations(model, rho / c, Lq, Wq, c, k)}</div>
+                `;
+            } else if (model === 'mek1') {
+                if (isNaN(erlangK) || erlangK < 1) {
+                    errorDiv.innerHTML = 'Please enter a valid Erlang-k shape parameter (k ≥ 1).';
+                    return;
+                }
+                if (lambda >= mu) {
+                    errorDiv.innerHTML = 'For M/Eₖ/1, arrival rate (λ) must be less than service rate (μ).';
+                    return;
+                }
+                const rho = lambda / mu;
+                const meanServiceTime = 1 / mu;
+                const variance = meanServiceTime * meanServiceTime / erlangK;
+                const Lq = (lambda * lambda * (variance + meanServiceTime * meanServiceTime)) / (2 * (1 - rho));
+                const L = Lq + rho;
+                const Wq = Lq / lambda;
+                const W = Wq + meanServiceTime;
+
+                results = `
+                    <h3>M/Eₖ/1 Results</h3>
+                    <p>Utilization (ρ): ${rho.toFixed(3)}</p>
+                    <p>Average Queue Length (Lq): ${Lq.toFixed(3)}</p>
+                    <p>Average Number in System (L): ${L.toFixed(3)}</p>
+                    <p>Average Waiting Time in Queue (Wq): ${Wq.toFixed(3)}</p>
+                    <p>Average Time in System (W): ${W.toFixed(3)}</p>
+                    <div class="recommendations">${getRecommendations(model, rho, Lq, Wq)}</div>
+                `;
+            } else if (model === 'mxm1') {
+                if (isNaN(batchSize) || batchSize < 1) {
+                    errorDiv.innerHTML = 'Please enter a valid mean batch size (≥ 1).';
+                    return;
+                }
+                if (lambda >= mu) {
+                    errorDiv.innerHTML = 'For Mˣ/M/1, arrival rate (λ) must be less than service rate (μ).';
+                    return;
+                }
+                const rho = lambda * batchSize / mu;
+                const Lq = (rho * (1 + batchSize)) / (2 * (1 - rho));
+                const L = Lq + rho;
+                const Wq = Lq / (lambda * batchSize);
+                const W = Wq + 1 / mu;
+
+                results = `
+                    <h3>Mˣ/M/1 Results</h3>
+                    <p>Utilization (ρ): ${rho.toFixed(3)}</p>
+                    <p>Average Queue Length (Lq): ${Lq.toFixed(3)}</p>
+                    <p>Average Number in System (L): ${L.toFixed(3)}</p>
+                    <p>Average Waiting Time in Queue (Wq): ${Wq.toFixed(3)}</p>
+                    <p>Average Time in System (W): ${W.toFixed(3)}</p>
+                    <div class="recommendations">${getRecommendations(model, rho, Lq, Wq)}</div>
+                `;
+            } else if (model === 'mmy1') {
+                if (isNaN(bulkSize) || bulkSize < 1) {
+                    errorDiv.innerHTML = 'Please enter a valid service batch size (Y ≥ 1).';
+                    return;
+                }
+                const rho = lambda / (mu * bulkSize);
+                const Lq = (rho * (bulkSize * (bulkSize + 1) / 2)) / (1 - rho);
+                const L = Lq + (rho * bulkSize);
+                const Wq = Lq / lambda;
+                const W = Wq + (bulkSize / mu) / 2;
+
+                results = `
+                    <h3>M/Mʸ/1 Results</h3>
+                    <p>Utilization (ρ): ${rho.toFixed(3)}</p>
+                    <p>Average Queue Length (Lq): ${Lq.toFixed(3)}</p>
+                    <p>Average Number in System (L): ${L.toFixed(3)}</p>
+                    <p>Average Waiting Time in Queue (Wq): ${Wq.toFixed(3)}</p>
+                    <p>Average Time in System (W): ${W.toFixed(3)}</p>
+                    <div class="recommendations">${getRecommendations(model, rho, Lq, Wq)}</div>
+                `;
+            } else {
+                results = `
+                    <h3>${model.toUpperCase()} Results</h3>
+                    <p>Calculations for this model are complex and typically require numerical methods or simulation. Please use specialized software for detailed analysis.</p>
+                `;
+            }
+
+            resultsDiv.innerHTML = results;
+        }
+
+        function factorial(n) {
+            if (n === 0 || n === 1) return 1;
+            return n * factorial(n - 1);
+        }
+
+        function combinatorial(n, k) {
+            if (k < 0 || k > n) return 0;
+            let result = 1;
+            for (let i = 1; i <= k; i++) {
+                result *= (n - i + 1) / i;
+            }
+            return result;
+        }
+
+        // Initialize description on page load
+        toggleInputs();
+    </script>
+</body>
+</html>

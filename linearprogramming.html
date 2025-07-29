@@ -1,0 +1,333 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Linear Programming Solver</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: url('https://images.unsplash.com/photo-1516321497487-e288fb19713f?auto=format&fit=crop&w=1920&q=80') no-repeat center center fixed;
+            background-size: cover;
+            color: #d0d0d0;
+        }
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 200px;
+            height: 100%;
+            background: rgba(20, 20, 20, 0.95);
+            padding: 20px;
+            box-shadow: 2px 0 8px rgba(0, 0, 0, 0.5);
+        }
+        .sidebar ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .sidebar ul li {
+            margin: 20px 0;
+        }
+        .sidebar ul li a {
+            color: #e0e0e0;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+        .sidebar ul li a:hover {
+            color: #1a73e8;
+        }
+        .calculator {
+            margin-left: 220px;
+            max-width: 800px;
+            padding: 20px;
+            background: rgba(20, 20, 20, 0.95);
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+            margin-top: 20px;
+            margin-bottom: 20px;
+        }
+        h1 {
+            text-align: center;
+            color: #e0e0e0;
+            text-shadow: 0 0 5px rgba(0, 0, 0, 0.7);
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #e0e0e0;
+        }
+        input, select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #444;
+            border-radius: 4px;
+            background: #1a1a1a;
+            color: #d0d0d0;
+        }
+        input:focus, select:focus {
+            outline: none;
+            border-color: #1a73e8;
+            box-shadow: 0 0 5px rgba(26, 115, 232, 0.5);
+        }
+        button {
+            background-color: #1a73e8;
+            color: #ffffff;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #1557b0;
+        }
+        #results {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #333;
+            border-radius: 4px;
+            background: rgba(30, 30, 30, 0.9);
+        }
+        .error {
+            color: #ff6666;
+            font-size: 0.9em;
+        }
+        .recommendations {
+            margin-top: 15px;
+            padding: 10px;
+            background: rgba(50, 50, 50, 0.9);
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+        .constraint {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .constraint input[type="number"] {
+            width: 80px;
+        }
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 150px;
+            }
+            .calculator {
+                margin-left: 170px;
+                padding: 15px;
+            }
+        }
+        @media (max-width: 600px) {
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+                padding: 10px;
+            }
+            .calculator {
+                margin-left: 0;
+                margin-top: 100px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <ul>
+            <li><a href="index.html">Home</a></li>
+            <li><a href="queueing.html">Queueing Models</a></li>
+            <li><a href="timestudy.html">Time Study</a></li>
+            <li><a href="linearprogramming.html">Linear Programming</a></li>
+        </ul>
+    </div>
+    <h1>Linear Programming Solver</h1>
+    <div class="calculator">
+        <div class="form-group">
+            <label>Objective Function (Maximize Z = ax₁ + bx₂)</label>
+            <div class="constraint">
+                <input type="number" id="obj-x1" step="any" placeholder="a">
+                <span>x₁ +</span>
+                <input type="number" id="obj-x2" step="any" placeholder="b">
+                <span>x₂</span>
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Constraints (ax₁ + bx₂ ≤ c)</label>
+            <div id="constraints">
+                <div class="constraint" id="constraint-1">
+                    <input type="number" class="constraint-x1" step="any" placeholder="a">
+                    <span>x₁ +</span>
+                    <input type="number" class="constraint-x2" step="any" placeholder="b">
+                    <span>x₂ ≤</span>
+                    <input type="number" class="constraint-rhs" step="any" placeholder="c">
+                </div>
+            </div>
+            <button onclick="addConstraint()">Add Constraint</button>
+        </div>
+        <button onclick="calculate()">Solve</button>
+        <div id="results"></div>
+        <div id="error" class="error"></div>
+    </div>
+
+    <script>
+        let constraintCount = 1;
+
+        function addConstraint() {
+            constraintCount++;
+            const constraintsDiv = document.getElementById('constraints');
+            const newConstraint = document.createElement('div');
+            newConstraint.className = 'constraint';
+            newConstraint.id = `constraint-${constraintCount}`;
+            newConstraint.innerHTML = `
+                <input type="number" class="constraint-x1" step="any" placeholder="a">
+                <span>x₁ +</span>
+                <input type="number" class="constraint-x2" step="any" placeholder="b">
+                <span>x₂ ≤</span>
+                <input type="number" class="constraint-rhs" step="any" placeholder="c">
+            `;
+            constraintsDiv.appendChild(newConstraint);
+        }
+
+        function getRecommendations(optimalValue, x1, x2) {
+            let recommendations = [];
+            
+            if (optimalValue === 0) {
+                recommendations.push("The optimal solution is zero. Check if the constraints allow positive values for x₁ and x₂.");
+            }
+            if (x1 === 0 || x2 === 0) {
+                recommendations.push("One variable is zero in the optimal solution. Consider adjusting constraints to allow more balanced resource allocation.");
+            }
+
+            return recommendations.length > 0 
+                ? `<h4>Recommendations</h4><ul>${recommendations.map(r => `<li>${r}</li>`).join('')}</ul>` 
+                : '<p>No specific recommendations. Solution appears optimal.</p>';
+        }
+
+        function calculate() {
+            const objX1 = parseFloat(document.getElementById('obj-x1').value);
+            const objX2 = parseFloat(document.getElementById('obj-x2').value);
+            const constraints = [];
+            for (let i = 1; i <= constraintCount; i++) {
+                const x1 = parseFloat(document.querySelector(`#constraint-${i} .constraint-x1`).value);
+                const x2 = parseFloat(document.querySelector(`#constraint-${i} .constraint-x2`).value);
+                const rhs = parseFloat(document.querySelector(`#constraint-${i} .constraint-rhs`).value);
+                if (!isNaN(x1) && !isNaN(x2) && !isNaN(rhs)) {
+                    constraints.push([x1, x2, rhs]);
+                }
+            }
+            const resultsDiv = document.getElementById('results');
+            const errorDiv = document.getElementById('error');
+
+            errorDiv.innerHTML = '';
+            resultsDiv.innerHTML = '';
+
+            if (isNaN(objX1) || isNaN(objX2)) {
+                errorDiv.innerHTML = 'Please enter valid coefficients for the objective function.';
+                return;
+            }
+            if (constraints.length === 0) {
+                errorDiv.innerHTML = 'Please add at least one valid constraint.';
+                return;
+            }
+
+            let vertices = [[0, 0]];
+            constraints.forEach(([a, b, c]) => {
+                if (b !== 0) {
+                    vertices.push([0, c / b]);
+                }
+                if (a !== 0) {
+                    vertices.push([c / a, 0]);
+                }
+            });
+            for (let i = 0; i < constraints.length; i++) {
+                for (let j = i + 1; j < constraints.length; j++) {
+                    const [a1, b1, c1] = constraints[i];
+                    const [a2, b2, c2] = constraints[j];
+                    const det = a1 * b2 - a2 * b1;
+                    if (det !== 0) {
+                        const x1 = (c1 * b2 - c2 * b1) / det;
+                        const x2 = (a1 * c2 - a2 * c1) / det;
+                        if (x1 >= 0 && x2 >= 0) {
+                            let feasible = true;
+                            for (let k = 0; k < constraints.length; k++) {
+                                const [a, b, c] = constraints[k];
+                                if (a * x1 + b * x2 > c) {
+                                    feasible = false;
+                                    break;
+                                }
+                            }
+                            if (feasible) {
+                                vertices.push([x1, x2]);
+                            }
+                        }
+                    }
+                }
+            }
+
+            let maxValue = -Infinity;
+            let optimalPoint = [0, 0];
+            vertices.forEach(([x1, x2]) => {
+                const value = objX1 * x1 + objX2 * x2;
+                if (value > maxValue) {
+                    maxValue = value;
+                    optimalPoint = [x1, x2];
+                }
+            });
+
+            resultsDiv.innerHTML = `
+                <h3>Linear Programming Results</h3>
+                <p>Optimal Value (Z): ${maxValue.toFixed(2)}</p>
+                <p>Optimal Solution: x₁ = ${optimalPoint[0].toFixed(2)}, x₂ = ${optimalPoint[1].toFixed(2)}</p>
+                <div class="recommendations">${getRecommendations(maxValue, optimalPoint[0], optimalPoint[1])}</div>
+            `;
+        }
+    </script>
+</body>
+</html>

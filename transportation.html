@@ -1,0 +1,367 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transportation Problem Solver</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: url('https://images.unsplash.com/photo-1516321497487-e288fb19713f?auto=format&fit=crop&w=1920&q=80') no-repeat center center fixed;
+            background-size: cover;
+            color: #d0d0d0;
+        }
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 200px;
+            height: 100%;
+            background: rgba(20, 20, 20, 0.95);
+            padding: 20px;
+            box-shadow: 2px 0 8px rgba(0, 0, 0, 0.5);
+        }
+        .sidebar ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .sidebar ul li {
+            margin: 20px 0;
+        }
+        .sidebar ul li a {
+            color: #e0e0e0;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+        .sidebar ul li a:hover {
+            color: #1a73e8;
+        }
+        .calculator {
+            margin-left: 220px;
+            max-width: 800px;
+            padding: 20px;
+            background: rgba(20, 20, 20, 0.95);
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+            margin-top: 20px;
+            margin-bottom: 20px;
+        }
+        h1 {
+            text-align: center;
+            color: #e0e0e0;
+            text-shadow: 0 0 5px rgba(0, 0, 0, 0.7);
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #e0e0e0;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #444;
+            border-radius: 4px;
+            background: #1a1a1a;
+            color: #d0d0d0;
+        }
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: #1a73e8;
+            box-shadow: 0 0 5px rgba(26, 115, 232, 0.5);
+        }
+        button {
+            background-color: #1a73e8;
+            color: #ffffff;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #1557b0;
+        }
+        #results {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #333;
+            border-radius: 4px;
+            background: rgba(30, 30, 30, 0.9);
+        }
+        .error {
+            color: #ff6666;
+            font-size: 0.9em;
+        }
+        .recommendations {
+            margin-top: 15px;
+            padding: 10px;
+            background: rgba(50, 50, 50, 0.9);
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th, td {
+            border: 1px solid #444;
+            padding: 8px;
+            text-align: center;
+        }
+        th {
+            background: #1a73e8;
+            color: #ffffff;
+        }
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 150px;
+            }
+            .calculator {
+                margin-left: 170px;
+                padding: 15px;
+            }
+        }
+        @media (max-width: 600px) {
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+                padding: 10px;
+            }
+            .calculator {
+                margin-left: 0;
+                margin-top: 100px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <ul>
+            <li><a href="index.html">Home</a></li>
+            <li><a href="queueing.html">Queueing Models</a></li>
+            <li><a href="timestudy.html">Time Study</a></li>
+            <li><a href="linearprogramming.html">Linear Programming</a></li>
+            <li><a href="samplesize.html">Sample Size</a></li>
+            <li><a href="niosh.html">NIOSH Lifting</a></li>
+            <li><a href="rulareba.html">RULA/REBA</a></li>
+            <li><a href="oee.html">OEE</a></li>
+            <li><a href="eoq.html">EOQ</a></li>
+            <li><a href="safetystock.html">Safety Stock</a></li>
+            <li><a href="rop.html">Reorder Point</a></li>
+            <li><a href="kanban.html">Kanban</a></li>
+            <li><a href="littleslaw.html">Little’s Law</a></li>
+            <li><a href="linebalancing.html">Line Balancing</a></li>
+            <li><a href="takttime.html">Takt Time</a></li>
+            <li><a href="traveldistance.html">Travel Distance</a></li>
+            <li><a href="loaddistance.html">Load-Distance</a></li>
+            <li><a href="processcapability.html">Process Capability</a></li>
+            <li><a href="pchartnpchart.html">P-Chart/NP-Chart</a></li>
+            <li><a href="xrbarchart.html">X̄-R Chart</a></li>
+            <li><a href="sigmalavel.html">Sigma Level</a></li>
+            <li><a href="gagerr.html">Gage R&R</a></li>
+            <li><a href="transportation.html">Transportation</a></li>
+            <li><a href="breakeven.html">Breakeven Analysis</a></li>
+            <li><a href="networkdiagram.html">Network Diagram (CPM)</a></li>
+            <li><a href="learningcurve.html">Learning Curve</a></li>
+            <li><a href="decisionmatrix.html">Decision Matrix</a></li>
+            <li><a href="ahp.html">AHP</a></li>
+            <li><a href="montecarlo.html">Monte Carlo</a></li>
+            <li><a href="markovchain.html">Markov Chain</a></li>
+        </ul>
+    </div>
+    <h1>Transportation Problem Solver</h1>
+    <div class="calculator">
+        <div class="form-group">
+            <label for="costs">Cost Matrix (rows: sources, columns: destinations, comma-separated, e.g., "10,20,30;40,50,60")</label>
+            <textarea id="costs" rows="4" placeholder="e.g., 10,20,30;40,50,60"></textarea>
+        </div>
+        <div class="form-group">
+            <label for="supply">Supply (comma-separated, e.g., "100,200")</label>
+            <input type="text" id="supply" placeholder="e.g., 100,200">
+        </div>
+        <div class="form-group">
+            <label for="demand">Demand (comma-separated, e.g., "80,120,100")</label>
+            <input type="text" id="demand" placeholder="e.g., 80,120,100">
+        </div>
+        <button onclick="calculate()">Calculate</button>
+        <div id="results"></div>
+        <div id="error" class="error"></div>
+    </div>
+
+    <script>
+        function getRecommendations(totalCost) {
+            let recommendations = [];
+            if (totalCost > 10000) {
+                recommendations.push("High transportation cost. Consider alternative routes or suppliers.");
+            }
+            return recommendations.length > 0 
+                ? `<h4>Recommendations</h4><ul>${recommendations.map(r => `<li>${r}</li>`).join('')}</ul>` 
+                : '<p>No specific recommendations. Cost appears reasonable.</p>';
+        }
+
+        function calculate() {
+            const costsInput = document.getElementById('costs').value;
+            const supplyInput = document.getElementById('supply').value;
+            const demandInput = document.getElementById('demand').value;
+            const resultsDiv = document.getElementById('results');
+            const errorDiv = document.getElementById('error');
+
+            errorDiv.innerHTML = '';
+            resultsDiv.innerHTML = '';
+
+            let costs, supply, demand;
+            try {
+                costs = costsInput.split(';').map(row => row.trim().split(',').map(v => parseFloat(v.trim())));
+                supply = supplyInput.split(',').map(v => parseInt(v.trim()));
+                demand = demandInput.split(',').map(v => parseInt(v.trim()));
+                if (costs.some(row => row.length !== demand.length) || costs.length !== supply.length) {
+                    throw new Error('Cost matrix dimensions must match supply and demand.');
+                }
+                if (supply.reduce((sum, s) => sum + s, 0) !== demand.reduce((sum, d) => sum + d, 0)) {
+                    throw new Error('Total supply must equal total demand.');
+                }
+            } catch (e) {
+                errorDiv.innerHTML = 'Invalid input. Ensure cost matrix, supply, and demand are correctly formatted and balanced.';
+                return;
+            }
+
+            // Vogel's Approximation Method
+            const m = supply.length, n = demand.length;
+            const allocation = Array(m).fill().map(() => Array(n).fill(0));
+            const tempSupply = [...supply];
+            const tempDemand = [...demand];
+            let totalCost = 0;
+
+            while (tempSupply.some(s => s > 0) && tempDemand.some(d => d > 0)) {
+                let maxPenalty = -Infinity, rowIdx = -1, colIdx = -1;
+                // Calculate penalties
+                for (let i = 0; i < m; i++) {
+                    if (tempSupply[i] <= 0) continue;
+                    const rowCosts = costs[i].slice().sort((a, b) => a - b);
+                    const penalty = rowCosts[1] - rowCosts[0];
+                    if (penalty > maxPenalty) {
+                        maxPenalty = penalty;
+                        rowIdx = i;
+                    }
+                }
+                for (let j = 0; j < n; j++) {
+                    if (tempDemand[j] <= 0) continue;
+                    const colCosts = costs.map(row => row[j]).sort((a, b) => a - b);
+                    const penalty = colCosts[1] - colCosts[0];
+                    if (penalty > maxPenalty) {
+                        maxPenalty = penalty;
+                        rowIdx = -1;
+                        colIdx = j;
+                    }
+                }
+
+                if (rowIdx !== -1) {
+                    const minCostIdx = costs[rowIdx].reduce((minIdx, cost, j) => 
+                        tempDemand[j] > 0 && (minIdx === -1 || cost < costs[rowIdx][minIdx]) ? j : minIdx, -1);
+                    const amount = Math.min(tempSupply[rowIdx], tempDemand[minCostIdx]);
+                    allocation[rowIdx][minCostIdx] = amount;
+                    totalCost += amount * costs[rowIdx][minCostIdx];
+                    tempSupply[rowIdx] -= amount;
+                    tempDemand[minCostIdx] -= amount;
+                } else if (colIdx !== -1) {
+                    const minCostIdx = costs.reduce((minIdx, row, i) => 
+                        tempSupply[i] > 0 && (minIdx === -1 || row[colIdx] < costs[minIdx][colIdx]) ? i : minIdx, -1);
+                    const amount = Math.min(tempSupply[minCostIdx], tempDemand[colIdx]);
+                    allocation[minCostIdx][colIdx] = amount;
+                    totalCost += amount * costs[minCostIdx][colIdx];
+                    tempSupply[minCostIdx] -= amount;
+                    tempDemand[colIdx] -= amount;
+                }
+            }
+
+            // Simplified MODI method (check optimality)
+            const u = Array(m).fill(0);
+            const v = Array(n).fill(0);
+            u[0] = 0;
+            let changed;
+            do {
+                changed = false;
+                for (let i = 0; i < m; i++) {
+                    for (let j = 0; j < n; j++) {
+                        if (allocation[i][j] > 0) {
+                            if (u[i] === undefined && v[j] !== undefined) {
+                                u[i] = costs[i][j] - v[j];
+                                changed = true;
+                            } else if (v[j] === undefined && u[i] !== undefined) {
+                                v[j] = costs[i][j] - u[i];
+                                changed = true;
+                            }
+                        }
+                    }
+                }
+            } while (changed);
+
+            const table = `
+                <table>
+                    <tr><th></th>${demand.map((_, j) => `<th>D${j+1}</th>`).join('')}</tr>
+                    ${allocation.map((row, i) => `
+                        <tr><th>S${i+1}</th>${row.map(cell => `<td>${cell}</td>`).join('')}</tr>
+                    `).join('')}
+                </table>
+            `;
+
+            resultsDiv.innerHTML = `
+                <h3>Transportation Problem Results</h3>
+                <p>Total Cost: ${totalCost.toFixed(2)}</p>
+                <p>Allocation:</p>
+                ${table}
+                <div class="recommendations">${getRecommendations(totalCost)}</div>
+            `;
+        }
+    </script>
+</body>
+</html>

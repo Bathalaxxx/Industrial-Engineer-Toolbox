@@ -1,0 +1,261 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sample Size Calculator for Time Studies</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: url('https://images.unsplash.com/photo-1516321497487-e288fb19713f?auto=format&fit=crop&w=1920&q=80') no-repeat center center fixed;
+            background-size: cover;
+            color: #d0d0d0;
+        }
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 200px;
+            height: 100%;
+            background: rgba(20, 20, 20, 0.95);
+            padding: 20px;
+            box-shadow: 2px 0 8px rgba(0, 0, 0, 0.5);
+        }
+        .sidebar ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .sidebar ul li {
+            margin: 20px 0;
+        }
+        .sidebar ul li a {
+            color: #e0e0e0;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+        .sidebar ul li a:hover {
+            color: #1a73e8;
+        }
+        .calculator {
+            margin-left: 220px;
+            max-width: 800px;
+            padding: 20px;
+            background: rgba(20, 20, 20, 0.95);
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+            margin-top: 20px;
+            margin-bottom: 20px;
+        }
+        h1 {
+            text-align: center;
+            color: #e0e0e0;
+            text-shadow: 0 0 5px rgba(0, 0, 0, 0.7);
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #e0e0e0;
+        }
+        input, select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #444;
+            border-radius: 4px;
+            background: #1a1a1a;
+            color: #d0d0d0;
+        }
+        input:focus, select:focus {
+            outline: none;
+            border-color: #1a73e8;
+            box-shadow: 0 0 5px rgba(26, 115, 232, 0.5);
+        }
+        button {
+            background-color: #1a73e8;
+            color: #ffffff;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #1557b0;
+        }
+        #results {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #333;
+            border-radius: 4px;
+            background: rgba(30, 30, 30, 0.9);
+        }
+        .error {
+            color: #ff6666;
+            font-size: 0.9em;
+        }
+        .recommendations {
+            margin-top: 15px;
+            padding: 10px;
+            background: rgba(50, 50, 50, 0.9);
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 150px;
+            }
+            .calculator {
+                margin-left: 170px;
+                padding: 15px;
+            }
+        }
+        @media (max-width: 600px) {
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+                padding: 10px;
+            }
+            .calculator {
+                margin-left: 0;
+                margin-top: 100px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <ul>
+            <li><a href="index.html">Home</a></li>
+            <li><a href="queueing.html">Queueing Models</a></li>
+            <li><a href="timestudy.html">Time Study</a></li>
+            <li><a href="linearprogramming.html">Linear Programming</a></li>
+            <li><a href="samplesize.html">Sample Size</a></li>
+            <li><a href="niosh.html">NIOSH Lifting</a></li>
+            <li><a href="rulareba.html">RULA/REBA</a></li>
+            <li><a href="oee.html">OEE</a></li>
+        </ul>
+    </div>
+    <h1>Sample Size Calculator for Time Studies</h1>
+    <div class="calculator">
+        <div class="form-group">
+            <label for="confidence-level">Confidence Level (%)</label>
+            <select id="confidence-level">
+                <option value="90">90%</option>
+                <option value="95" selected>95%</option>
+                <option value="99">99%</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="error-margin">Error Margin (% of mean)</label>
+            <input type="number" id="error-margin" step="any" min="0" required>
+        </div>
+        <div class="form-group">
+            <label for="mean-time">Mean Observed Time (minutes)</label>
+            <input type="number" id="mean-time" step="any" min="0" required>
+        </div>
+        <div class="form-group">
+            <label for="std-dev">Standard Deviation (minutes)</label>
+            <input type="number" id="std-dev" step="any" min="0" required>
+        </div>
+        <button onclick="calculate()">Calculate</button>
+        <div id="results"></div>
+        <div id="error" class="error"></div>
+    </div>
+
+    <script>
+        function getRecommendations(sampleSize) {
+            let recommendations = [];
+            if (sampleSize > 100) {
+                recommendations.push("Large sample size (>100). Consider reducing variability or increasing error margin to lower required observations.");
+            } else if (sampleSize < 10) {
+                recommendations.push("Small sample size (<10). Ensure sufficient observations to capture process variability.");
+            }
+            return recommendations.length > 0 
+                ? `<h4>Recommendations</h4><ul>${recommendations.map(r => `<li>${r}</li>`).join('')}</ul>` 
+                : '<p>No specific recommendations. Sample size appears adequate.</p>';
+        }
+
+        function calculate() {
+            const confidenceLevel = parseFloat(document.getElementById('confidence-level').value);
+            const errorMargin = parseFloat(document.getElementById('error-margin').value) / 100;
+            const meanTime = parseFloat(document.getElementById('mean-time').value);
+            const stdDev = parseFloat(document.getElementById('std-dev').value);
+            const resultsDiv = document.getElementById('results');
+            const errorDiv = document.getElementById('error');
+
+            errorDiv.innerHTML = '';
+            resultsDiv.innerHTML = '';
+
+            if (isNaN(errorMargin) || errorMargin <= 0) {
+                errorDiv.innerHTML = 'Please enter a valid positive error margin.';
+                return;
+            }
+            if (isNaN(meanTime) || meanTime <= 0) {
+                errorDiv.innerHTML = 'Please enter a valid positive mean observed time.';
+                return;
+            }
+            if (isNaN(stdDev) || stdDev < 0) {
+                errorDiv.innerHTML = 'Please enter a valid non-negative standard deviation.';
+                return;
+            }
+
+            const zScores = { 90: 1.645, 95: 1.96, 99: 2.576 };
+            const z = zScores[confidenceLevel];
+            const sampleSize = Math.ceil(Math.pow((z * stdDev) / (errorMargin * meanTime), 2));
+
+            resultsDiv.innerHTML = `
+                <h3>Sample Size Results</h3>
+                <p>Required Sample Size: ${sampleSize} observations</p>
+                <div class="recommendations">${getRecommendations(sampleSize)}</div>
+            `;
+        }
+    </script>
+</body>
+</html>

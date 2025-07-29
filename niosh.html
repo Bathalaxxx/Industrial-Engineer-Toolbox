@@ -1,0 +1,315 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NIOSH Lifting Equation Calculator</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: url('https://images.unsplash.com/photo-1516321497487-e288fb19713f?auto=format&fit=crop&w=1920&q=80') no-repeat center center fixed;
+            background-size: cover;
+            color: #d0d0d0;
+        }
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 200px;
+            height: 100%;
+            background: rgba(20, 20, 20, 0.95);
+            padding: 20px;
+            box-shadow: 2px 0 8px rgba(0, 0, 0, 0.5);
+        }
+        .sidebar ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .sidebar ul li {
+            margin: 20px 0;
+        }
+        .sidebar ul li a {
+            color: #e0e0e0;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+        .sidebar ul li a:hover {
+            color: #1a73e8;
+        }
+        .calculator {
+            margin-left: 220px;
+            max-width: 800px;
+            padding: 20px;
+            background: rgba(20, 20, 20, 0.95);
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+            margin-top: 20px;
+            margin-bottom: 20px;
+        }
+        h1 {
+            text-align: center;
+            color: #e0e0e0;
+            text-shadow: 0 0 5px rgba(0, 0, 0, 0.7);
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #e0e0e0;
+        }
+        input, select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #444;
+            border-radius: 4px;
+            background: #1a1a1a;
+            color: #d0d0d0;
+        }
+        input:focus, select:focus {
+            outline: none;
+            border-color: #1a73e8;
+            box-shadow: 0 0 5px rgba(26, 115, 232, 0.5);
+        }
+        button {
+            background-color: #1a73e8;
+            color: #ffffff;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #1557b0;
+        }
+        #results {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #333;
+            border-radius: 4px;
+            background: rgba(30, 30, 30, 0.9);
+        }
+        .error {
+            color: #ff6666;
+            font-size: 0.9em;
+        }
+        .recommendations {
+            margin-top: 15px;
+            padding: 10px;
+            background: rgba(50, 50, 50, 0.9);
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 150px;
+            }
+            .calculator {
+                margin-left: 170px;
+                padding: 15px;
+            }
+        }
+        @media (max-width: 600px) {
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+                padding: 10px;
+            }
+            .calculator {
+                margin-left: 0;
+                margin-top: 100px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <ul>
+            <li><a href="index.html">Home</a></li>
+            <li><a href="queueing.html">Queueing Models</a></li>
+            <li><a href="timestudy.html">Time Study</a></li>
+            <li><a href="linearprogramming.html">Linear Programming</a></li>
+            <li><a href="samplesize.html">Sample Size</a></li>
+            <li><a href="niosh.html">NIOSH Lifting</a></li>
+            <li><a href="rulareba.html">RULA/REBA</a></li>
+            <li><a href="oee.html">OEE</a></li>
+        </ul>
+    </div>
+    <h1>NIOSH Lifting Equation Calculator</h1>
+    <div class="calculator">
+        <div class="form-group">
+            <label for="load-weight">Load Weight (kg)</label>
+            <input type="number" id="load-weight" step="any" min="0" required>
+        </div>
+        <div class="form-group">
+            <label for="horizontal-distance">Horizontal Distance (cm, from midpoint of ankles to hands)</label>
+            <input type="number" id="horizontal-distance" step="any" min="25" max="63" required>
+        </div>
+        <div class="form-group">
+            <label for="vertical-distance">Vertical Distance (cm, height of hands from floor)</label>
+            <input type="number" id="vertical-distance" step="any" min="0" max="175" required>
+        </div>
+        <div class="form-group">
+            <label for="travel-distance">Travel Distance (cm, vertical movement of load)</label>
+            <input type="number" id="travel-distance" step="any" min="25" required>
+        </div>
+        <div class="form-group">
+            <label for="asymmetry-angle">Asymmetry Angle (degrees, trunk twist)</label>
+            <input type="number" id="asymmetry-angle" step="any" min="0" max="135" required>
+        </div>
+        <div class="form-group">
+            <label for="frequency">Lifting Frequency (lifts per minute)</label>
+            <input type="number" id="frequency" step="any" min="0" max="15" required>
+        </div>
+        <div class="form-group">
+            <label for="duration">Duration (hours)</label>
+            <select id="duration">
+                <option value="1">≤ 1 hour</option>
+                <option value="2">1-2 hours</option>
+                <option value="8">2-8 hours</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="coupling">Coupling (grip quality)</label>
+            <select id="coupling">
+                <option value="good">Good (handles)</option>
+                <option value="fair">Fair (no handles, but firm grip)</option>
+                <option value="poor">Poor (no handles, loose grip)</option>
+            </select>
+        </div>
+        <button onclick="calculate()">Calculate</button>
+        <div id="results"></div>
+        <div id="error" class="error"></div>
+    </div>
+
+    <script>
+        function getRecommendations(rwl, li) {
+            let recommendations = [];
+            if (li > 1.0) {
+                recommendations.push("Lifting Index (LI > 1.0) indicates increased risk of injury. Consider reducing load weight or adjusting task parameters.");
+            }
+            if (li > 3.0) {
+                recommendations.push("High Lifting Index (LI > 3.0). Urgent redesign of lifting task is recommended to prevent musculoskeletal disorders.");
+            }
+            if (rwl < 10) {
+                recommendations.push("Low RWL (< 10 kg). Evaluate task for excessive horizontal distance, asymmetry, or poor coupling.");
+            }
+            return recommendations.length > 0 
+                ? `<h4>Recommendations</h4><ul>${recommendations.map(r => `<li>${r}</li>`).join('')}</ul>` 
+                : '<p>No specific recommendations. Lifting task appears safe.</p>';
+        }
+
+        function calculate() {
+            const loadWeight = parseFloat(document.getElementById('load-weight').value);
+            const H = parseFloat(document.getElementById('horizontal-distance').value);
+            const V = parseFloat(document.getElementById('vertical-distance').value);
+            const D = parseFloat(document.getElementById('travel-distance').value);
+            const A = parseFloat(document.getElementById('asymmetry-angle').value);
+            const F = parseFloat(document.getElementById('frequency').value);
+            const duration = parseFloat(document.getElementById('duration').value);
+            const coupling = document.getElementById('coupling').value;
+            const resultsDiv = document.getElementById('results');
+            const errorDiv = document.getElementById('error');
+
+            errorDiv.innerHTML = '';
+            resultsDiv.innerHTML = '';
+
+            if (isNaN(loadWeight) || loadWeight <= 0) {
+                errorDiv.innerHTML = 'Please enter a valid positive load weight.';
+                return;
+            }
+            if (isNaN(H) || H < 25 || H > 63) {
+                errorDiv.innerHTML = 'Horizontal distance must be between 25 and 63 cm.';
+                return;
+            }
+            if (isNaN(V) || V < 0 || V > 175) {
+                errorDiv.innerHTML = 'Vertical distance must be between 0 and 175 cm.';
+                return;
+            }
+            if (isNaN(D) || D < 25) {
+                errorDiv.innerHTML = 'Travel distance must be at least 25 cm.';
+                return;
+            }
+            if (isNaN(A) || A < 0 || A > 135) {
+                errorDiv.innerHTML = 'Asymmetry angle must be between 0 and 135 degrees.';
+                return;
+            }
+            if (isNaN(F) || F < 0 || F > 15) {
+                errorDiv.innerHTML = 'Lifting frequency must be between 0 and 15 lifts per minute.';
+                return;
+            }
+
+            const LC = 23; // Load Constant in kg
+            const HM = H <= 25 ? 1 : (25 / H);
+            const VM = Math.max(0, 1 - 0.003 * Math.abs(V - 75));
+            const DM = Math.max(0, 0.82 + 4.5 / D);
+            const AM = Math.max(0, 1 - 0.0032 * A);
+            const FMTable = {
+                1: { 0.2: 1, 0.5: 0.97, 1: 0.94, 2: 0.91, 4: 0.88, 6: 0.84, 8: 0.75, 10: 0.6, 12: 0.45, 15: 0.3 },
+                2: { 0.2: 0.95, 0.5: 0.92, 1: 0.89, 2: 0.86, 4: 0.81, 6: 0.73, 8: 0.57, 10: 0.35, 12: 0.2, 15: 0.15 },
+                8: { 0.2: 0.85, 0.5: 0.81, 1: 0.75, 2: 0.65, 4: 0.45, 6: 0.25, 8: 0.15, 10: 0.1, 12: 0.05, 15: 0 }
+            };
+            const FM = F <= 0.2 ? FMTable[duration][0.2] : FMTable[duration][Math.min(F, 15)] || 0;
+            const CMTable = { good: 1, fair: 0.95, poor: 0.9 };
+            const CM = CMTable[coupling];
+
+            const RWL = LC * HM * VM * DM * AM * FM * CM;
+            const LI = loadWeight / RWL;
+
+            resultsDiv.innerHTML = `
+                <h3>NIOSH Lifting Equation Results</h3>
+                <p>Recommended Weight Limit (RWL): ${RWL.toFixed(2)} kg</p>
+                <p>Lifting Index (LI): ${LI.toFixed(2)}</p>
+                <div class="recommendations">${getRecommendations(RWL, LI)}</div>
+            `;
+        }
+    </script>
+</body>
+</html>

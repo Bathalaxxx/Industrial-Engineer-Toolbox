@@ -1,0 +1,202 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Industrial Engineering Toolkit</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: url('https://images.unsplash.com/photo-1516321497487-e288fb19713f?auto=format&fit=crop&w=1920&q=80') no-repeat center center fixed;
+            background-size: cover;
+            color: #d0d0d0;
+        }
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 200px;
+            height: 100%;
+            background: rgba(20, 20, 20, 0.95);
+            padding: 20px;
+            box-shadow: 2px 0 8px rgba(0, 0, 0, 0.5);
+        }
+        .sidebar ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .sidebar ul li {
+            margin: 20px 0;
+        }
+        .sidebar ul li a {
+            color: #e0e0e0;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+        .sidebar ul li a:hover {
+            color: #1a73e8;
+        }
+        .container {
+            margin-left: 220px;
+            max-width: 800px;
+            padding: 20px;
+            background: rgba(20, 20, 20, 0.95);
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+            margin-top: 20px;
+            margin-bottom: 20px;
+        }
+        h1 {
+            text-align: center;
+            color: #e0e0e0;
+            text-shadow: 0 0 5px rgba(0, 0, 0, 0.7);
+        }
+        p {
+            font-size: 1.1em;
+            line-height: 1.6;
+        }
+        .tool-list {
+            margin-top: 20px;
+        }
+        .tool-list h3 {
+            color: #1a73e8;
+        }
+        .tool-list ul {
+            list-style: none;
+            padding: 0;
+        }
+        .tool-list ul li {
+            margin: 10px 0;
+        }
+        .tool-list ul li a {
+            color: #bbbbbb;
+            text-decoration: none;
+        }
+        .tool-list ul li a:hover {
+            color: #1a73e8;
+        }
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 150px;
+            }
+            .container {
+                margin-left: 170px;
+                padding: 15px;
+            }
+        }
+        @media (max-width: 600px) {
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+                padding: 10px;
+            }
+            .container {
+                margin-left: 0;
+                margin-top: 100px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <ul>
+            <li><a href="index.html">Home</a></li>
+            <li><a href="queueing.html">Queueing Models</a></li>
+            <li><a href="timestudy.html">Time Study</a></li>
+            <li><a href="linearprogramming.html">Linear Programming</a></li>
+            <li><a href="samplesize.html">Sample Size</a></li>
+            <li><a href="niosh.html">NIOSH Lifting</a></li>
+            <li><a href="rulareba.html">RULA/REBA</a></li>
+            <li><a href="oee.html">OEE</a></li>
+            <li><a href="eoq.html">EOQ</a></li>
+            <li><a href="safetystock.html">Safety Stock</a></li>
+            <li><a href="rop.html">Reorder Point</a></li>
+            <li><a href="kanban.html">Kanban</a></li>
+            <li><a href="littleslaw.html">Little’s Law</a></li>
+            <li><a href="linebalancing.html">Line Balancing</a></li>
+            <li><a href="takttime.html">Takt Time</a></li>
+            <li><a href="traveldistance.html">Travel Distance</a></li>
+            <li><a href="loaddistance.html">Load-Distance</a></li>
+            <li><a href="processcapability.html">Process Capability</a></li>
+            <li><a href="pchartnpchart.html">P-Chart/NP-Chart</a></li>
+            <li><a href="xrbarchart.html">X̄-R Chart</a></li>
+            <li><a href="sigmalavel.html">Sigma Level</a></li>
+            <li><a href="gagerr.html">Gage R&R</a></li>
+        </ul>
+    </div>
+    <div class="container">
+        <h1>Industrial Engineering Toolkit</h1>
+        <p>Welcome to the Industrial Engineering Toolkit, your one-stop solution for optimizing processes, managing inventory, improving efficiency, designing layouts, and ensuring quality control. Explore our tools to analyze queueing systems, measure work performance, solve optimization problems, assess ergonomic risks, manage inventory systems, optimize facility layouts, and monitor process quality.</p>
+        <div class="tool-list">
+            <h3>Available Tools</h3>
+            <ul>
+                <li><a href="queueing.html">Queueing Models Calculator</a>: Analyze queueing systems like checkout lines or call centers to optimize wait times and resource allocation.</li>
+                <li><a href="timestudy.html">Time Study Calculator</a>: Calculate standard times for tasks to improve productivity and set performance benchmarks.</li>
+                <li><a href="linearprogramming.html">Linear Programming Solver</a>: Solve optimization problems to maximize profits or minimize costs under constraints.</li>
+                <li><a href="samplesize.html">Sample Size Calculator</a>: Determine the required number of observations for accurate time studies based on confidence level and error margin.</li>
+                <li><a href="niosh.html">NIOSH Lifting Equation Calculator</a>: Assess manual lifting tasks to calculate safe weight limits and ergonomic risks.</li>
+                <li><a href="rulareba.html">RULA/REBA Calculator</a>: Evaluate ergonomic risks for upper limb (RULA) or entire body (REBA) tasks based on posture and repetition.</li>
+                <li><a href="oee.html">OEE Calculator</a>: Calculate Overall Equipment Effectiveness to measure manufacturing productivity.</li>
+                <li><a href="eoq.html">EOQ Calculator</a>: Determine the optimal order quantity to minimize inventory costs.</li>
+                <li><a href="safetystock.html">Safety Stock Calculator</a>: Calculate safety stock to buffer against demand variability and lead time.</li>
+                <li><a href="rop.html">Reorder Point Calculator</a>: Determine when to reorder inventory based on demand, lead time, and safety stock.</li>
+                <li><a href="kanban.html">Kanban Calculator</a>: Estimate the number of Kanban cards needed for a pull-based inventory system.</li>
+                <li><a href="littleslaw.html">Little’s Law Calculator</a>: Analyze process flow using Little’s Law to relate inventory, throughput, and flow time.</li>
+                <li><a href="linebalancing.html">Line Balancing Calculator</a>: Balance production lines by calculating cycle time and allocating tasks to workstations.</li>
+                <li><a href="takttime.html">Takt Time Calculator</a>: Calculate takt time to align production with customer demand.</li>
+                <li><a href="traveldistance.html">Travel Distance Matrix Calculator</a>: Generate a distance matrix for facility layout optimization.</li>
+                <li><a href="loaddistance.html">Load-Distance Score Calculator</a>: Calculate load-distance scores to optimize facility location planning.</li>
+                <li><a href="processcapability.html">Process Capability Calculator</a>: Calculate Cp and Cpk to assess process capability relative to specification limits.</li>
+                <li><a href="pchartnpchart.html">P-Chart/NP-Chart Calculator</a>: Compute control limits for proportion defective or number of defectives charts.</li>
+                <li><a href="xrbarchart.html">X̄-R Chart Calculator</a>: Compute control limits for mean and range charts for variable data.</li>
+                <li><a href="sigmalavel.html">Sigma Level Calculator</a>: Estimate process sigma level based on defects per million opportunities (DPMO).</li>
+                <li><a href="gagerr.html">Gage R&R Calculator</a>: Assess measurement system variability (repeatability and reproducibility).</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>
