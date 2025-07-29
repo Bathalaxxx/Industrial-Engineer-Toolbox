@@ -1,43 +1,4 @@
-<script type="text/javascript">
-        var gk_isXlsx = false;
-        var gk_xlsxFileLookup = {};
-        var gk_fileData = {};
-        function filledCell(cell) {
-          return cell !== '' && cell != null;
-        }
-        function loadFileData(filename) {
-        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
-            try {
-                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
-                var firstSheetName = workbook.SheetNames[0];
-                var worksheet = workbook.Sheets[firstSheetName];
-
-                // Convert sheet to JSON to filter blank rows
-                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
-                // Filter out blank rows (rows where all cells are empty, null, or undefined)
-                var filteredData = jsonData.filter(row => row.some(filledCell));
-
-                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
-                var headerRowIndex = filteredData.findIndex((row, index) =>
-                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
-                );
-                // Fallback
-                if (headerRowIndex === -1 || headerRowIndex > 25) {
-                  headerRowIndex = 0;
-                }
-
-                // Convert filtered JSON back to CSV
-                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
-                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
-                return csv;
-            } catch (e) {
-                console.error(e);
-                return "";
-            }
-        }
-        return gk_fileData[filename] || "";
-        }
-        </script><!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -146,6 +107,24 @@
             border-radius: 4px;
             font-size: 0.9em;
         }
+        .form-section {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: rgba(40, 40, 40, 0.9);
+            border-radius: 4px;
+        }
+        .form-section h3 {
+            margin-top: 0;
+            color: #1a73e8;
+        }
+        .toggle-section {
+            cursor: pointer;
+            color: #1a73e8;
+            margin-bottom: 10px;
+        }
+        .hidden {
+            display: none;
+        }
         @media (max-width: 768px) {
             .sidebar {
                 width: 150px;
@@ -184,51 +163,162 @@
             <li><a href="safetystock.html">Safety Stock</a></li>
             <li><a href="rop.html">Reorder Point</a></li>
             <li><a href="kanban.html">Kanban</a></li>
-            <li><a href="littleslaw.html">Little’s Law</a></li>
+            <li><a href="littleslaw.html">Little's Law</a></li>
         </ul>
     </div>
-    <h1>Reorder Point Calculator</h1>
     <div class="calculator">
-        <div class="form-group">
-            <label for="daily-demand">Average Daily Demand (units)</label>
-            <input type="number" id="daily-demand" step="any" min="0" required>
+        <h1>Reorder Point Calculator</h1>
+        
+        <div class="form-section">
+            <h3>Basic Calculation</h3>
+            <div class="form-group">
+                <label for="daily-demand">Average Daily Demand (units)</label>
+                <input type="number" id="daily-demand" step="any" min="0" required>
+            </div>
+            <div class="form-group">
+                <label for="lead-time">Lead Time (days)</label>
+                <input type="number" id="lead-time" step="any" min="0" required>
+            </div>
+            <div class="form-group">
+                <label for="safety-stock">Safety Stock (units)</label>
+                <input type="number" id="safety-stock" step="1" min="0" required>
+            </div>
         </div>
-        <div class="form-group">
-            <label for="lead-time">Lead Time (days)</label>
-            <input type="number" id="lead-time" step="any" min="0" required>
+
+        <div class="toggle-section" onclick="toggleSection('advanced-section')">
+            <h3>Advanced Options (Variable Demand/Lead Time) ▼</h3>
         </div>
-        <div class="form-group">
-            <label for="safety-stock">Safety Stock (units)</label>
-            <input type="number" id="safety-stock" step="1" min="0" required>
+
+        <div id="advanced-section" class="form-section hidden">
+            <div class="form-group">
+                <label for="demand-type">Demand Type</label>
+                <select id="demand-type">
+                    <option value="constant">Constant Demand</option>
+                    <option value="variable">Variable Demand</option>
+                </select>
+            </div>
+            
+            <div id="variable-demand-fields" class="hidden">
+                <div class="form-group">
+                    <label for="demand-std-dev">Demand Standard Deviation (units/day)</label>
+                    <input type="number" id="demand-std-dev" step="any" min="0" value="0">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="lead-time-type">Lead Time Type</label>
+                <select id="lead-time-type">
+                    <option value="constant">Constant Lead Time</option>
+                    <option value="variable">Variable Lead Time</option>
+                </select>
+            </div>
+            
+            <div id="variable-lead-time-fields" class="hidden">
+                <div class="form-group">
+                    <label for="lead-time-std-dev">Lead Time Standard Deviation (days)</label>
+                    <input type="number" id="lead-time-std-dev" step="any" min="0" value="0">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="service-level">Desired Service Level (%)</label>
+                <input type="number" id="service-level" step="0.1" min="0" max="100" value="95">
+            </div>
         </div>
+
         <button onclick="calculate()">Calculate</button>
         <div id="results"></div>
         <div id="error" class="error"></div>
     </div>
 
     <script>
-        function getRecommendations(rop) {
+        // Toggle sections
+        function toggleSection(sectionId) {
+            const section = document.getElementById(sectionId);
+            section.classList.toggle('hidden');
+            
+            // Update the arrow indicator
+            const toggleElement = section.previousElementSibling;
+            const arrow = toggleElement.querySelector('h3').innerHTML.includes('▼') ? '▲' : '▼';
+            toggleElement.querySelector('h3').innerHTML = toggleElement.querySelector('h3').innerHTML.replace(/[▼▲]/, arrow);
+        }
+
+        // Show/hide fields based on selection
+        document.getElementById('demand-type').addEventListener('change', function() {
+            document.getElementById('variable-demand-fields').classList.toggle('hidden', this.value !== 'variable');
+        });
+
+        document.getElementById('lead-time-type').addEventListener('change', function() {
+            document.getElementById('variable-lead-time-fields').classList.toggle('hidden', this.value !== 'variable');
+        });
+
+        // Get Z-score for service level
+        function getZScore(serviceLevel) {
+            // Common Z-scores for service levels
+            const zScores = {
+                80: 0.84,
+                85: 1.04,
+                90: 1.28,
+                95: 1.65,
+                97: 1.88,
+                99: 2.33,
+                99.5: 2.58,
+                99.9: 3.09
+            };
+            
+            // Round to nearest available service level
+            const roundedLevel = Math.round(serviceLevel * 10) / 10;
+            return zScores[roundedLevel] || 1.65; // Default to 95% if not found
+        }
+
+        function getRecommendations(rop, dailyDemand, leadTime, safetyStock) {
             let recommendations = [];
+            
+            // Check for high/low ROP
             if (rop > 1000) {
                 recommendations.push("High reorder point (>1000 units). Verify demand and lead time accuracy.");
             } else if (rop < 10) {
                 recommendations.push("Low reorder point (<10 units). Ensure safety stock is sufficient for demand variability.");
             }
+            
+            // Check lead time
+            if (leadTime > 30) {
+                recommendations.push("Long lead time (>30 days). Consider finding alternative suppliers with shorter lead times.");
+            }
+            
+            // Check inventory turnover
+            const inventoryTurnover = (365 * dailyDemand) / (rop - safetyStock);
+            if (inventoryTurnover < 4) {
+                recommendations.push(`Low inventory turnover (${inventoryTurnover.toFixed(1)} turns/year). Consider reducing order quantities.`);
+            } else if (inventoryTurnover > 24) {
+                recommendations.push(`High inventory turnover (${inventoryTurnover.toFixed(1)} turns/year). Consider increasing order quantities to reduce ordering costs.`);
+            }
+            
             return recommendations.length > 0 
                 ? `<h4>Recommendations</h4><ul>${recommendations.map(r => `<li>${r}</li>`).join('')}</ul>` 
                 : '<p>No specific recommendations. Reorder point appears balanced.</p>';
         }
 
         function calculate() {
+            // Basic inputs
             const dailyDemand = parseFloat(document.getElementById('daily-demand').value);
             const leadTime = parseFloat(document.getElementById('lead-time').value);
             const safetyStock = parseInt(document.getElementById('safety-stock').value);
+            
+            // Advanced inputs
+            const demandType = document.getElementById('demand-type').value;
+            const demandStdDev = parseFloat(document.getElementById('demand-std-dev').value) || 0;
+            const leadTimeType = document.getElementById('lead-time-type').value;
+            const leadTimeStdDev = parseFloat(document.getElementById('lead-time-std-dev').value) || 0;
+            const serviceLevel = parseFloat(document.getElementById('service-level').value) || 95;
+            
             const resultsDiv = document.getElementById('results');
             const errorDiv = document.getElementById('error');
 
             errorDiv.innerHTML = '';
             resultsDiv.innerHTML = '';
 
+            // Input validation
             if (isNaN(dailyDemand) || dailyDemand <= 0) {
                 errorDiv.innerHTML = 'Please enter a valid positive daily demand.';
                 return;
@@ -241,14 +331,75 @@
                 errorDiv.innerHTML = 'Please enter a valid non-negative safety stock.';
                 return;
             }
+            if (serviceLevel < 0 || serviceLevel > 100) {
+                errorDiv.innerHTML = 'Service level must be between 0 and 100%.';
+                return;
+            }
 
-            const rop = Math.round(dailyDemand * leadTime + safetyStock);
+            // Calculate basic ROP
+            let rop = dailyDemand * leadTime + safetyStock;
+            
+            // Advanced calculations if needed
+            let advancedCalculation = false;
+            let advancedFormula = '';
+            
+            if (demandType === 'variable' || leadTimeType === 'variable') {
+                advancedCalculation = true;
+                const zScore = getZScore(serviceLevel);
+                
+                if (demandType === 'variable' && leadTimeType === 'variable') {
+                    // Both demand and lead time are variable
+                    const term1 = Math.pow(dailyDemand, 2) * Math.pow(leadTimeStdDev, 2);
+                    const term2 = Math.pow(demandStdDev, 2) * leadTime;
+                    const combinedVariance = term1 + term2;
+                    const safetyStockAdvanced = zScore * Math.sqrt(combinedVariance);
+                    
+                    rop = dailyDemand * leadTime + safetyStockAdvanced;
+                    advancedFormula = `ROP = (D × LT) + (Z × √((D² × σLT²) + (σD² × LT)))<br>
+                                      = (${dailyDemand} × ${leadTime}) + (${zScore.toFixed(2)} × √((${dailyDemand}² × ${leadTimeStdDev}²) + (${demandStdDev}² × ${leadTime})))<br>
+                                      = ${(dailyDemand * leadTime).toFixed(2)} + ${safetyStockAdvanced.toFixed(2)}`;
+                } 
+                else if (demandType === 'variable') {
+                    // Only demand is variable
+                    const safetyStockAdvanced = zScore * demandStdDev * Math.sqrt(leadTime);
+                    rop = dailyDemand * leadTime + safetyStockAdvanced;
+                    advancedFormula = `ROP = (D × LT) + (Z × σD × √LT)<br>
+                                      = (${dailyDemand} × ${leadTime}) + (${zScore.toFixed(2)} × ${demandStdDev} × √${leadTime})<br>
+                                      = ${(dailyDemand * leadTime).toFixed(2)} + ${safetyStockAdvanced.toFixed(2)}`;
+                } 
+                else if (leadTimeType === 'variable') {
+                    // Only lead time is variable
+                    const safetyStockAdvanced = zScore * dailyDemand * leadTimeStdDev;
+                    rop = dailyDemand * leadTime + safetyStockAdvanced;
+                    advancedFormula = `ROP = (D × LT) + (Z × D × σLT)<br>
+                                      = (${dailyDemand} × ${leadTime}) + (${zScore.toFixed(2)} × ${dailyDemand} × ${leadTimeStdDev})<br>
+                                      = ${(dailyDemand * leadTime).toFixed(2)} + ${safetyStockAdvanced.toFixed(2)}`;
+                }
+            }
 
-            resultsDiv.innerHTML = `
+            rop = Math.round(rop);
+            
+            // Display results
+            let resultHTML = `
                 <h3>Reorder Point Results</h3>
-                <p>Reorder Point: ${rop} units</p>
-                <div class="recommendations">${getRecommendations(rop)}</div>
+                <p><strong>Reorder Point:</strong> ${rop} units</p>
+                <p><strong>Formula used:</strong> ROP = (Average Daily Demand × Lead Time) + Safety Stock</p>
+                <p><strong>Calculation:</strong> (${dailyDemand} × ${leadTime}) + ${safetyStock} = ${rop} units</p>
             `;
+            
+            if (advancedCalculation) {
+                resultHTML += `
+                    <div class="form-section">
+                        <h4>Advanced Calculation Details</h4>
+                        <p><strong>Service Level:</strong> ${serviceLevel}% (Z-score: ${getZScore(serviceLevel).toFixed(2)})</p>
+                        <p><strong>Advanced Formula:</strong><br>${advancedFormula}</p>
+                    </div>
+                `;
+            }
+            
+            resultHTML += `<div class="recommendations">${getRecommendations(rop, dailyDemand, leadTime, safetyStock)}</div>`;
+            
+            resultsDiv.innerHTML = resultHTML;
         }
     </script>
 </body>
