@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EOQ Calculator</title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Playfair+Display:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
             --primary-color: #2c3e50;
@@ -18,6 +19,8 @@
             --border-radius: 8px;
             --box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
             --transition: all 0.3s ease;
+            --success-color: #27ae60;
+            --warning-color: #f39c12;
         }
         
         body {
@@ -46,6 +49,9 @@
             padding: 0 20px 20px;
             border-bottom: 1px solid rgba(255,255,255,0.1);
             margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
         
         .sidebar-header h2 {
@@ -56,21 +62,40 @@
             font-weight: 700;
         }
         
+        .sidebar-header a {
+            color: var(--text-light);
+            text-decoration: none;
+        }
+        
+        .search-bar {
+            width: 100%;
+            padding: 10px 15px;
+            margin: 0 20px 15px;
+            border-radius: var(--border-radius);
+            border: none;
+            background: rgba(255,255,255,0.1);
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+        
         .menu-category {
             color: var(--secondary-color);
             font-weight: 500;
-            text-transform: uppercase;
-            font-size: 0.8rem;
-            letter-spacing: 1px;
-            padding: 15px 20px 5px;
+            padding: 15px 20px;
             margin-top: 10px;
             border-top: 1px solid rgba(255,255,255,0.1);
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            user-select: none;
         }
         
         .sidebar ul {
             list-style: none;
             padding: 0;
             margin: 0;
+            overflow: hidden;
         }
         
         .sidebar ul li {
@@ -78,7 +103,9 @@
         }
         
         .sidebar ul li a {
-            display: block;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             color: var(--text-light);
             text-decoration: none;
             padding: 10px 20px;
@@ -181,6 +208,18 @@
             font-size: 0.95rem;
         }
         
+        .tag {
+            font-size: 0.7rem;
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-left: 8px;
+        }
+        
+        .tag-basic {
+            background-color: var(--success-color);
+            color: white;
+        }
+        
         @media (max-width: 1024px) {
             .sidebar {
                 width: 240px;
@@ -214,56 +253,38 @@
 <body>
     <div class="sidebar">
         <div class="sidebar-header">
-            <h2>IE Toolkit</h2>
+            <a href="index.html"><h2>IE Toolkit</h2></a>
+            <i class="fas fa-cog" style="color: var(--text-light); cursor: pointer;"></i>
         </div>
         
-        <div class="menu-category">Inventory Management</div>
+        <input type="text" class="search-bar" placeholder="Search tools...">
+        
+        <div class="menu-category expanded">
+            <span><i class="fas fa-boxes"></i> Inventory Management</span>
+        </div>
         <ul>
-            <li><a href="eoq.html">EOQ Calculator</a></li>
-            <li><a href="safetystock.html">Safety Stock Calculator</a></li>
-            <li><a href="rop.html">Reorder Point Calculator</a></li>
-            <li><a href="kanban.html">Kanban Calculator</a></li>
+            <li><a href="eoq.html">EOQ Calculator <span class="tag tag-basic">Basic</span></a></li>
+            <li><a href="safetystock.html">Safety Stock Calculator <span class="tag tag-intermediate">Intermediate</span></a></li>
+            <li><a href="rop.html">Reorder Point Calculator <span class="tag tag-intermediate">Intermediate</span></a></li>
+            <li><a href="kanban.html">Kanban Calculator <span class="tag tag-advanced">Advanced</span></a></li>
         </ul>
         
-        <div class="menu-category">Production Systems</div>
+        <div class="menu-category">
+            <span><i class="fas fa-cogs"></i> Production Systems</span>
+        </div>
         <ul>
-            <li><a href="oee.html">OEE Calculator</a></li>
-            <li><a href="linebalancing.html">Line Balancing</a></li>
-            <li><a href="takttime.html">Takt Time Calculator</a></li>
-            <li><a href="littleslaw.html">Little's Law Calculator</a></li>
+            <li><a href="oee.html">OEE Calculator <span class="tag tag-intermediate">Intermediate</span></a></li>
+            <li><a href="linebalancing.html">Line Balancing <span class="tag tag-advanced">Advanced</span></a></li>
+            <li><a href="takttime.html">Takt Time Calculator <span class="tag tag-basic">Basic</span></a></li>
+            <li><a href="littleslaw.html">Little's Law Calculator <span class="tag tag-intermediate">Intermediate</span></a></li>
         </ul>
         
-        <div class="menu-category">Work Measurement</div>
+        <div class="menu-category">
+            <span><i class="fas fa-stopwatch"></i> Work Measurement</span>
+        </div>
         <ul>
-            <li><a href="timestudy.html">Time Study Calculator</a></li>
-            <li><a href="samplesize.html">Sample Size Calculator</a></li>
-        </ul>
-        
-        <div class="menu-category">Ergonomics</div>
-        <ul>
-            <li><a href="niosh.html">NIOSH Lifting Calculator</a></li>
-            <li><a href="rulareba.html">RULA/REBA Calculator</a></li>
-        </ul>
-        
-        <div class="menu-category">Facility Planning</div>
-        <ul>
-            <li><a href="traveldistance.html">Travel Distance Matrix</a></li>
-            <li><a href="loaddistance.html">Load-Distance Score</a></li>
-        </ul>
-        
-        <div class="menu-category">Quality Control</div>
-        <ul>
-            <li><a href="processcapability.html">Process Capability</a></li>
-            <li><a href="pchartnpchart.html">P-Chart/NP-Chart</a></li>
-            <li><a href="xrbarchart.html">X̄-R Chart</a></li>
-            <li><a href="sigmalavel.html">Sigma Level</a></li>
-            <li><a href="gagerr.html">Gage R&R</a></li>
-        </ul>
-        
-        <div class="menu-category">Operations Research</div>
-        <ul>
-            <li><a href="queueing.html">Queueing Models</a></li>
-            <li><a href="linearprogramming.html">Linear Programming</a></li>
+            <li><a href="timestudy.html">Time Study Calculator <span class="tag tag-basic">Basic</span></a></li>
+            <li><a href="samplesize.html">Sample Size Calculator <span class="tag tag-intermediate">Intermediate</span></a></li>
         </ul>
     </div>
 
