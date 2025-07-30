@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Industrial Engineering Toolkit</title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Playfair+Display:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
             --primary-color: #2c3e50;
@@ -18,6 +19,8 @@
             --border-radius: 8px;
             --box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
             --transition: all 0.3s ease;
+            --success-color: #27ae60;
+            --warning-color: #f39c12;
         }
         
         body {
@@ -46,6 +49,9 @@
             padding: 0 20px 20px;
             border-bottom: 1px solid rgba(255,255,255,0.1);
             margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
         
         .sidebar-header h2 {
@@ -56,21 +62,57 @@
             font-weight: 700;
         }
         
+        .search-bar {
+            width: 100%;
+            padding: 10px 15px;
+            margin: 0 20px 15px;
+            border-radius: var(--border-radius);
+            border: none;
+            background: rgba(255,255,255,0.1);
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+        
+        .search-bar::placeholder {
+            color: rgba(255,255,255,0.6);
+        }
+        
         .menu-category {
             color: var(--secondary-color);
             font-weight: 500;
-            text-transform: uppercase;
-            font-size: 0.8rem;
-            letter-spacing: 1px;
-            padding: 15px 20px 5px;
+            padding: 15px 20px;
             margin-top: 10px;
             border-top: 1px solid rgba(255,255,255,0.1);
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            user-select: none;
+        }
+        
+        .menu-category i {
+            transition: var(--transition);
+        }
+        
+        .menu-category.collapsed i {
+            transform: rotate(0deg);
+        }
+        
+        .menu-category.expanded i {
+            transform: rotate(90deg);
         }
         
         .sidebar ul {
             list-style: none;
             padding: 0;
             margin: 0;
+            overflow: hidden;
+            max-height: 0;
+            transition: max-height 0.3s ease-out;
+        }
+        
+        .sidebar ul.expanded {
+            max-height: 1000px;
         }
         
         .sidebar ul li {
@@ -78,7 +120,9 @@
         }
         
         .sidebar ul li a {
-            display: block;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             color: var(--text-light);
             text-decoration: none;
             padding: 10px 20px;
@@ -91,6 +135,28 @@
             background: rgba(255,255,255,0.05);
             border-left: 3px solid var(--secondary-color);
             color: var(--secondary-color);
+        }
+        
+        .tag {
+            font-size: 0.7rem;
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-left: 8px;
+        }
+        
+        .tag-basic {
+            background-color: var(--success-color);
+            color: white;
+        }
+        
+        .tag-intermediate {
+            background-color: var(--secondary-color);
+            color: white;
+        }
+        
+        .tag-advanced {
+            background-color: var(--accent-color);
+            color: white;
         }
         
         .container {
@@ -131,6 +197,7 @@
             box-shadow: var(--box-shadow);
             overflow: hidden;
             transition: var(--transition);
+            position: relative;
         }
         
         .tool-card:hover {
@@ -148,6 +215,13 @@
             margin-top: 0;
             margin-bottom: 15px;
             font-size: 1.3rem;
+            display: flex;
+            align-items: center;
+        }
+        
+        .tool-card h3 i {
+            margin-right: 10px;
+            color: var(--secondary-color);
         }
         
         .tool-card p {
@@ -156,28 +230,75 @@
             margin-bottom: 15px;
         }
         
-        .tool-card a {
-            color: var(--secondary-color);
-            text-decoration: none;
-            font-weight: 500;
+        .usage {
+            display: block;
+            font-size: 0.8rem;
+            color: #777;
+            margin-bottom: 10px;
+        }
+        
+        .quick-calc {
+            background: rgba(52, 152, 219, 0.1);
+            border-radius: var(--border-radius);
+            padding: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .quick-calc input {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        .quick-calc button {
+            background: var(--secondary-color);
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
             font-size: 0.9rem;
+            transition: var(--transition);
+        }
+        
+        .quick-calc button:hover {
+            background: #2980b9;
+        }
+        
+        .button-primary {
             display: inline-flex;
             align-items: center;
+            background: var(--secondary-color);
+            color: white;
+            text-decoration: none;
+            padding: 8px 15px;
+            border-radius: var(--border-radius);
+            font-weight: 500;
+            font-size: 0.9rem;
             transition: var(--transition);
         }
         
-        .tool-card a:hover {
-            color: var(--accent-color);
-        }
-        
-        .tool-card a::after {
-            content: '→';
-            margin-left: 5px;
-            transition: var(--transition);
-        }
-        
-        .tool-card a:hover::after {
+        .button-primary:hover {
+            background: #2980b9;
             transform: translateX(3px);
+        }
+        
+        .button-primary i {
+            margin-left: 5px;
+        }
+        
+        .popular-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: var(--accent-color);
+            color: white;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: bold;
         }
         
         @media (max-width: 1024px) {
@@ -207,6 +328,9 @@
             .header h1 {
                 font-size: 2rem;
             }
+            .menu-category {
+                padding: 10px 15px;
+            }
         }
         
         @media (max-width: 480px) {
@@ -226,56 +350,41 @@
     <div class="sidebar">
         <div class="sidebar-header">
             <h2>IE Toolkit</h2>
+            <i class="fas fa-cog" style="color: var(--text-light); cursor: pointer;"></i>
         </div>
         
-        <div class="menu-category">Inventory Management</div>
-        <ul>
-            <li><a href="eoq.html">EOQ Calculator</a></li>
-            <li><a href="safetystock.html">Safety Stock Calculator</a></li>
-            <li><a href="rop.html">Reorder Point Calculator</a></li>
-            <li><a href="kanban.html">Kanban Calculator</a></li>
+        <input type="text" class="search-bar" placeholder="Search tools...">
+        
+        <div class="menu-category expanded" onclick="toggleCategory('inventory')">
+            <span><i class="fas fa-boxes"></i> Inventory Management</span>
+            <i class="fas fa-chevron-right"></i>
+        </div>
+        <ul id="inventory" class="expanded">
+            <li><a href="eoq.html">EOQ Calculator <span class="tag tag-basic">Basic</span></a></li>
+            <li><a href="safetystock.html">Safety Stock Calculator <span class="tag tag-intermediate">Intermediate</span></a></li>
+            <li><a href="rop.html">Reorder Point Calculator <span class="tag tag-intermediate">Intermediate</span></a></li>
+            <li><a href="kanban.html">Kanban Calculator <span class="tag tag-advanced">Advanced</span></a></li>
         </ul>
         
-        <div class="menu-category">Production Systems</div>
-        <ul>
-            <li><a href="oee.html">OEE Calculator</a></li>
-            <li><a href="linebalancing.html">Line Balancing</a></li>
-            <li><a href="takttime.html">Takt Time Calculator</a></li>
-            <li><a href="littleslaw.html">Little's Law Calculator</a></li>
+        <div class="menu-category collapsed" onclick="toggleCategory('production')">
+            <span><i class="fas fa-cogs"></i> Production Systems</span>
+            <i class="fas fa-chevron-right"></i>
+        </div>
+        <ul id="production">
+            <li><a href="oee.html">OEE Calculator <span class="tag tag-intermediate">Intermediate</span></a></li>
+            <li><a href="linebalancing.html">Line Balancing <span class="tag tag-advanced">Advanced</span></a></li>
+            <li><a href="takttime.html">Takt Time Calculator <span class="tag tag-basic">Basic</span></a></li>
+            <li><a href="littleslaw.html">Little's Law Calculator <span class="tag tag-intermediate">Intermediate</span></a></li>
         </ul>
         
-        <div class="menu-category">Work Measurement</div>
-        <ul>
-            <li><a href="timestudy.html">Time Study Calculator</a></li>
-            <li><a href="samplesize.html">Sample Size Calculator</a></li>
-            <li><a href="worksampling.html">Work Sampling Calculator</a></li>
-        </ul>
-        
-        <div class="menu-category">Ergonomics</div>
-        <ul>
-            <li><a href="niosh.html">NIOSH Lifting Calculator</a></li>
-            <li><a href="rulareba.html">RULA/REBA Calculator</a></li>
-        </ul>
-        
-        <div class="menu-category">Facility Planning</div>
-        <ul>
-            <li><a href="traveldistance.html">Travel Distance Matrix</a></li>
-            <li><a href="loaddistance.html">Load-Distance Score</a></li>
-        </ul>
-        
-        <div class="menu-category">Quality Control</div>
-        <ul>
-            <li><a href="processcapability.html">Process Capability</a></li>
-            <li><a href="pchartnpchart.html">P-Chart/NP-Chart</a></li>
-            <li><a href="xrbarchart.html">X̄-R Chart</a></li>
-            <li><a href="sigmalavel.html">Sigma Level</a></li>
-            <li><a href="gagerr.html">Gage R&R</a></li>
-        </ul>
-        
-        <div class="menu-category">Operations Research</div>
-        <ul>
-            <li><a href="queueing.html">Queueing Models</a></li>
-            <li><a href="linearprogramming.html">Linear Programming</a></li>
+        <div class="menu-category collapsed" onclick="toggleCategory('work')">
+            <span><i class="fas fa-stopwatch"></i> Work Measurement</span>
+            <i class="fas fa-chevron-right"></i>
+        </div>
+        <ul id="work">
+            <li><a href="timestudy.html">Time Study Calculator <span class="tag tag-basic">Basic</span></a></li>
+            <li><a href="samplesize.html">Sample Size Calculator <span class="tag tag-intermediate">Intermediate</span></a></li>
+            <li><a href="worksampling.html">Work Sampling Calculator <span class="tag tag-advanced">Advanced</span></a></li>
         </ul>
     </div>
 
@@ -287,61 +396,104 @@
 
         <div class="tool-grid">
             <div class="tool-card">
+                <div class="popular-badge">Most Used</div>
                 <div class="tool-card-content">
-                    <h3>Inventory Management</h3>
-                    <p>Optimize inventory levels, calculate reorder points, determine safety stock, and implement Kanban systems with our specialized calculators.</p>
-                    <a href="eoq.html">Explore Tools →</a>
+                    <h3><i class="fas fa-boxes"></i> EOQ Calculator</h3>
+                    <p>Determine optimal order quantities to minimize total inventory costs (holding + ordering costs).</p>
+                    <span class="usage">Used 1,240 times this week</span>
+                    <div class="quick-calc">
+                        <input type="number" placeholder="Annual Demand (units)">
+                        <input type="number" placeholder="Order Cost ($)">
+                        <button>Quick Calculate</button>
+                    </div>
+                    <a href="eoq.html" class="button-primary">Open Tool <i class="fas fa-arrow-right"></i></a>
                 </div>
             </div>
             
             <div class="tool-card">
                 <div class="tool-card-content">
-                    <h3>Production Systems</h3>
-                    <p>Analyze production efficiency with OEE, balance assembly lines, calculate takt time, and apply Little's Law to your processes.</p>
-                    <a href="oee.html">Explore Tools →</a>
+                    <h3><i class="fas fa-cogs"></i> OEE Calculator</h3>
+                    <p>Calculate Overall Equipment Effectiveness by analyzing availability, performance, and quality.</p>
+                    <span class="usage">Used 890 times this week</span>
+                    <div class="quick-calc">
+                        <input type="number" placeholder="Planned Production Time">
+                        <button>Quick Calculate</button>
+                    </div>
+                    <a href="oee.html" class="button-primary">Open Tool <i class="fas fa-arrow-right"></i></a>
+                </div>
+            </div>
+            
+            <div class="tool-card">
+                <div class="popular-badge">Popular</div>
+                <div class="tool-card-content">
+                    <h3><i class="fas fa-stopwatch"></i> Time Study Calculator</h3>
+                    <p>Determine standard times and performance ratings for work elements.</p>
+                    <span class="usage">Used 1,050 times this week</span>
+                    <div class="quick-calc">
+                        <input type="number" placeholder="Observed Time">
+                        <input type="number" placeholder="Performance Rating %">
+                        <button>Quick Calculate</button>
+                    </div>
+                    <a href="timestudy.html" class="button-primary">Open Tool <i class="fas fa-arrow-right"></i></a>
                 </div>
             </div>
             
             <div class="tool-card">
                 <div class="tool-card-content">
-                    <h3>Work Measurement</h3>
-                    <p>Conduct time studies with statistical confidence and determine optimal sample sizes for accurate work measurement.</p>
-                    <a href="timestudy.html">Explore Tools →</a>
+                    <h3><i class="fas fa-people-carry"></i> NIOSH Lifting Calculator</h3>
+                    <p>Assess manual lifting tasks using the NIOSH lifting equation to determine recommended weight limits.</p>
+                    <span class="usage">Used 720 times this week</span>
+                    <a href="niosh.html" class="button-primary">Open Tool <i class="fas fa-arrow-right"></i></a>
                 </div>
             </div>
             
             <div class="tool-card">
                 <div class="tool-card-content">
-                    <h3>Ergonomics</h3>
-                    <p>Assess ergonomic risks with NIOSH lifting equations and RULA/REBA methods to improve workplace safety.</p>
-                    <a href="niosh.html">Explore Tools →</a>
+                    <h3><i class="fas fa-chart-bar"></i> Process Capability</h3>
+                    <p>Calculate Cp, Cpk indices to evaluate how well your process meets specifications.</p>
+                    <span class="usage">Used 680 times this week</span>
+                    <div class="quick-calc">
+                        <input type="number" placeholder="Upper Spec Limit">
+                        <input type="number" placeholder="Lower Spec Limit">
+                        <button>Quick Calculate</button>
+                    </div>
+                    <a href="processcapability.html" class="button-primary">Open Tool <i class="fas fa-arrow-right"></i></a>
                 </div>
             </div>
             
             <div class="tool-card">
                 <div class="tool-card-content">
-                    <h3>Facility Planning</h3>
-                    <p>Optimize facility layouts with travel distance matrices and load-distance scoring methods.</p>
-                    <a href="traveldistance.html">Explore Tools →</a>
-                </div>
-            </div>
-            
-            <div class="tool-card">
-                <div class="tool-card-content">
-                    <h3>Quality Control</h3>
-                    <p>Monitor process capability, create control charts, calculate sigma levels, and perform Gage R&R studies.</p>
-                    <a href="processcapability.html">Explore Tools →</a>
-                </div>
-            </div>
-            
-            <div class="tool-card">
-                <div class="tool-card-content">
-                    <h3>Operations Research</h3>
-                    <p>Solve queueing problems and linear programming models to optimize your operations.</p>
-                    <a href="queueing.html">Explore Tools →</a>
+                    <h3><i class="fas fa-project-diagram"></i> Line Balancing</h3>
+                    <p>Optimize workstation assignments to minimize idle time and maximize throughput.</p>
+                    <span class="usage">Used 540 times this week</span>
+                    <a href="linebalancing.html" class="button-primary">Open Tool <i class="fas fa-arrow-right"></i></a>
                 </div>
             </div>
         </div>
     </div>
+
+    <script>
+        function toggleCategory(categoryId) {
+            const category = document.getElementById(categoryId);
+            const arrow = document.querySelector(`[onclick="toggleCategory('${categoryId}')"] i`);
+            
+            if (category.classList.contains('expanded')) {
+                category.classList.remove('expanded');
+                arrow.parentElement.classList.add('collapsed');
+                arrow.parentElement.classList.remove('expanded');
+                arrow.style.transform = 'rotate(0deg)';
+            } else {
+                category.classList.add('expanded');
+                arrow.parentElement.classList.add('expanded');
+                arrow.parentElement.classList.remove('collapsed');
+                arrow.style.transform = 'rotate(90deg)';
+            }
+        }
+        
+        // Initialize first category as expanded
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelector('.menu-category').classList.add('expanded');
+        });
+    </script>
 </body>
 </html>
